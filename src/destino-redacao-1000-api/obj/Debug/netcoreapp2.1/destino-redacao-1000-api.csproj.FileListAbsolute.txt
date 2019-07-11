@@ -1,0 +1,14 @@
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\bin\Debug\netcoreapp2.1\destino-redacao-1000-api.deps.json
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\bin\Debug\netcoreapp2.1\destino-redacao-1000-api.runtimeconfig.json
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\bin\Debug\netcoreapp2.1\destino-redacao-1000-api.runtimeconfig.dev.json
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\bin\Debug\netcoreapp2.1\destino-redacao-1000-api.dll
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\bin\Debug\netcoreapp2.1\destino-redacao-1000-api.pdb
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\obj\Debug\netcoreapp2.1\destino-redacao-1000-api.csprojAssemblyReference.cache
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\obj\Debug\netcoreapp2.1\destino-redacao-1000-api.csproj.CoreCompileInputs.cache
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\obj\Debug\netcoreapp2.1\destino-redacao-1000-api.RazorAssemblyInfo.cache
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\obj\Debug\netcoreapp2.1\destino-redacao-1000-api.RazorAssemblyInfo.cs
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\obj\Debug\netcoreapp2.1\destino-redacao-1000-api.AssemblyInfoInputs.cache
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\obj\Debug\netcoreapp2.1\destino-redacao-1000-api.AssemblyInfo.cs
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\obj\Debug\netcoreapp2.1\destino-redacao-1000-api.RazorTargetAssemblyInfo.cache
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\obj\Debug\netcoreapp2.1\destino-redacao-1000-api.dll
+C:\Projects\destino-redacao-1000\destino-redacao-1000-api\src\destino-redacao-1000-api\obj\Debug\netcoreapp2.1\destino-redacao-1000-api.pdb
