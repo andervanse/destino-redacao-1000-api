@@ -31,7 +31,7 @@ namespace destino_redacao_1000_api
             builder
                 .ConfigureLogging(logging => {
                     logging.AddAWSProvider();
-                    logging.SetMinimumLevel(LogLevel.Information);
+                    logging.SetMinimumLevel(LogLevel.Debug);
                 })
                 .UseStartup<Startup>();
         }

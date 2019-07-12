@@ -17,7 +17,6 @@ namespace destino_redacao_1000_api
 
         public async Task<bool> SendAsync(string email, string confirmationUrl, bool hasPasswordChanged)
         {
-            string imgPath = _configuration["Website:BaseAddress"] + _configuration["Website:Logo"];
             StringBuilder body = new StringBuilder();
             body.AppendLine("<html><body>");
             body.AppendLine("<div align=\"center\">");

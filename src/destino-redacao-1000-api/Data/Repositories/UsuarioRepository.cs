@@ -39,7 +39,6 @@ namespace destino_redacao_1000_api
                     exprAttrValues.Add(":dtAt", new AttributeValue { S = user.DataAtualizacao.Value.ToString("dd/MM/yyyy hh:mm:ss") });
                     updExp.Append(" #dtAt = :dtAt,");
                     exprAttrNames.Add("#dtAt", "dt-atualizacao");
-
                    
                     if (!String.IsNullOrEmpty(user.Senha))
                     {
@@ -87,14 +86,24 @@ namespace destino_redacao_1000_api
                         exprAttrValues.Add(":urlFoto", new AttributeValue { S = user.UrlFoto });
                         updExp.Append(" #urlFoto = :urlFoto,");
                         exprAttrNames.Add("#urlFoto", "url-foto");
-                    }                    
+                    }                             
 
-                    if (!String.IsNullOrEmpty(user.Observacao))
+                    if (String.IsNullOrEmpty(user.CodigoEmailConfirmacao))
                     {
-                        exprAttrValues.Add(":obs", new AttributeValue { S = user.Observacao });
-                        updExp.Append(" #obs = :obs,");
-                        exprAttrNames.Add("#obs", "obs");
-                    }                                  
+                        var hashEmail = SecurityCrypt.GenerateHash(user.Email);
+                        exprAttrValues.Add(":codEmail", new AttributeValue { S = hashEmail });
+                        updExp.Append(" #codEmail = :codEmail,");
+                        exprAttrNames.Add("#codEmail", "cod-email");
+                    }  
+
+                    if (!user.EmailConfirmado.HasValue)
+                    {
+                        user.EmailConfirmado = false;
+                    }
+                    
+                    exprAttrValues.Add(":emailConf", new AttributeValue { BOOL = user.EmailConfirmado.Value });
+                    updExp.Append(" #emailConf = :emailConf,");
+                    exprAttrNames.Add("#emailConf", "email-confirmado");
 
                     var request = new UpdateItemRequest
                     {
@@ -258,22 +267,20 @@ namespace destino_redacao_1000_api
                         { "#login", "login" },
                         { "#nome", "nome" },
                         { "#dtAt", "dt-atualizacao" },
-                        { "#dtNasc", "dt-nascimento" },
-                        { "#sexo", "sexo" },
                         { "#hashedPassword", "hashedPassword" },
                         { "#salt", "salt" },
                         { "#email", "email" },
                         { "#celular", "celular" },
                         { "#urlFoto", "url-foto" },
-                        { "#obs", "obs" },
-                        { "#isAdmin", "admin" }
+                        { "#codEmail", "cod-email" },
+                        { "#emailConfirmado", "email-confirmado" }
                     },
                 ExpressionAttributeValues = new Dictionary<string, AttributeValue>
                     {
                          { ":t", new AttributeValue { S = "usuario" } },
                          { $":{attrName}", attrValue }
                     },
-                ProjectionExpression = "#id, #login, #nome, #dtAt, #dtNasc, #sexo, #hashedPassword, #salt, #email, #celular, #urlFoto, #obs, #isAdmin"
+                ProjectionExpression = "#id, #login, #nome, #dtAt, #hashedPassword, #salt, #email, #celular, #urlFoto, #codEmail, #emailConfirmado"
             };
         }
 
@@ -303,10 +310,6 @@ namespace destino_redacao_1000_api
                     {
                         usuario.Login = value.S;
                     }
-                    else if (attributeName == "obs")
-                    {
-                        usuario.Observacao = value.S;
-                    }
                     else if (attributeName == "url-foto")
                     {
                         usuario.UrlFoto = value.S;
@@ -333,6 +336,14 @@ namespace destino_redacao_1000_api
                     {
                         usuario.Salt = value.S;
                     }
+                    else if (attributeName == "cod-email")
+                    {
+                        usuario.CodigoEmailConfirmacao = value.S;
+                    }   
+                    else if (attributeName == "email-confirmado")
+                    {
+                        usuario.EmailConfirmado = value.BOOL;
+                    }                                      
                     else if (attributeName == "admin")
                     {
                         usuario.Administrador = value.BOOL;

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 namespace destino_redacao_1000_api
@@ -18,29 +19,31 @@ namespace destino_redacao_1000_api
         private readonly IUsuarioRepository _userRepo;
         private readonly IConfiguration _config;
         private readonly IEmailLoginConfirmation _emailLoginConfirmation;
+        private readonly ILogger<AuthController> _logger;
 
         public AuthController(IUsuarioRepository userRepo,
                               IConfiguration configuration,
-                              IEmailLoginConfirmation emailLoginConfirmation)
+                              IEmailLoginConfirmation emailLoginConfirmation,
+                              ILogger<AuthController> logger)
         {
             _userRepo = userRepo;
             _config = configuration;
             _emailLoginConfirmation = emailLoginConfirmation;
+            _logger = logger;
         }
 
         [AllowAnonymous]
         [HttpPost]
-        public async Task<IActionResult> Authentication([FromBody] CredencialLogin credentials)
+        public async Task<IActionResult> Authentication([FromBody] CredenciaisUsuarioViewModel credenciais)
         {
-            if (credentials == null) return BadRequest();
+            if (credenciais == null) return BadRequest();
 
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var user = new Usuario
             {                
-                Login = credentials.Login,
-                Nome = credentials.Login,
-                Senha = credentials.Senha
+                Login = credenciais.Login,
+                Senha = credenciais.Senha
             };
 
             var response = await _userRepo.UsuarioValidoAsync(user);
@@ -50,6 +53,12 @@ namespace destino_redacao_1000_api
             
             if (response.Return != null)
             {
+                if (!response.Return.EmailConfirmado.Value)
+                {
+                    response.Messages.Add("E-mail não confirmado");
+                    return BadRequest(response.Messages);
+                }
+                                
                 var claims = new List<Claim>
                 {
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
@@ -73,14 +82,12 @@ namespace destino_redacao_1000_api
                 var jwtToken = handler.WriteToken(token);
                 return Ok(new { 
                     token = jwtToken,
-                    usuario = new Usuario
+                    usuario = new UsuarioViewModel
                         {
                             Id = response.Return.Id,
                             Nome = response.Return.Nome,
                             Email = response.Return.Email,
-                            Celular = response.Return.Celular,
-                            Administrador = response.Return.Administrador,
-                            Observacao = response.Return.Observacao
+                            Celular = response.Return.Celular
                         }
                 });
             }
@@ -91,18 +98,48 @@ namespace destino_redacao_1000_api
         }
 
         [AllowAnonymous]
-        [HttpPatch]
-        public async Task<IActionResult> Patch([FromBody] CredencialUsuario credentials)
+        [HttpGet("{email}/{codConfirmacao}")]
+        public async Task<IActionResult> Get(string email, string codConfirmacao)
         {
-            if (credentials == null) return BadRequest();
+            _logger.LogDebug("confirmar-email");
+
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(codConfirmacao)) return BadRequest();
+
+            var usuario = new Usuario 
+            {
+                Login = email,
+                Email = email, 
+                CodigoEmailConfirmacao = codConfirmacao
+            };
+
+            var response = await _userRepo.ObterUsuarioAsync(usuario);
+
+            if (response.HasError) return BadRequest(response.ErrorMessages);
+
+            if (response.Return == null) return NotFound();
+
+            if (response.Return != null)
+            {
+                response.Return.EmailConfirmado = true;
+                await _userRepo.SalvarAsync(response.Return);
+            }
+
+            return Ok();
+        }
+
+        [AllowAnonymous]
+        [HttpPatch]
+        public async Task<IActionResult> Patch([FromBody] LoginUsuarioViewModel loginUsuario)
+        {
+            if (loginUsuario == null) return BadRequest();
 
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var user = new Usuario
             {
-                Nome = credentials.Login,
-                Login = credentials.Login,
-                Senha = credentials.Senha
+                Nome = loginUsuario.Login,
+                Login = loginUsuario.Login,
+                Senha = loginUsuario.Senha
             };
 
             var response = await _userRepo.ObterUsuarioAsync(user);
