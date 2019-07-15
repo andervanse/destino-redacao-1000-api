@@ -17,7 +17,7 @@ namespace destino_redacao_1000_api
 {
     public class Startup
     {
-        public const string AppS3BucketKey = "AppS3Bucket";
+        public const string AppS3BucketKey = "Website:S3Bucket";
 
         public Startup(IConfiguration configuration)
         {
@@ -33,6 +33,7 @@ namespace destino_redacao_1000_api
             services.AddScoped<IEmailSender, ZohoEmailSender>();
             services.AddScoped<IEmailLoginConfirmation, EmailLoginConfirmation>();
             services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+            services.AddScoped<IArquivoRepository, ArquivoRepository>();
             services.AddScoped<IUploadFile, AWSUploadFile>();
             services.AddSingleton<IConfiguration>(x => Configuration);            
 
@@ -74,6 +75,7 @@ namespace destino_redacao_1000_api
                 app.UseHsts();
             }
 
+            app.UseAuthentication();
             app.UseCors();
             app.UseHttpsRedirection();
             app.UseMvc();

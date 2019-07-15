@@ -5,7 +5,7 @@ namespace destino_redacao_1000_api
 {
     public interface IUploadFile
     {
-        Task<string> UploadFileAsync(Stream fileStream, string keyName);
-        Task<string> DeleteFileAsync(string keyName);        
+        Task<string> UploadFileAsync(Usuario usuario, Stream fileStream, string keyName);
+        Task<string> DeleteFileAsync(Usuario usuario, string keyName);        
     }
 }

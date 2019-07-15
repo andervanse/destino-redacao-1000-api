@@ -11,18 +11,17 @@ using Amazon.S3;
 using Amazon.S3.Model;
 
 using Newtonsoft.Json;
+using Microsoft.AspNetCore.Authorization;
 
 namespace destino_redacao_1000_api.Controllers
 {
-    /// <summary>
-    /// ASP.NET Core controller acting as a S3 Proxy.
-    /// </summary>
+
+    [Authorize]
     [Route("api/[controller]")]
     public class S3ProxyController : Controller
     {
         IAmazonS3 S3Client { get; set; }
         ILogger Logger { get; set; }
-
         string BucketName { get; set; }
 
         public S3ProxyController(IConfiguration configuration, ILogger<S3ProxyController> logger, IAmazonS3 s3Client)
@@ -31,6 +30,7 @@ namespace destino_redacao_1000_api.Controllers
             this.S3Client = s3Client;
 
             this.BucketName = configuration[Startup.AppS3BucketKey];
+
             if(string.IsNullOrEmpty(this.BucketName))
             {
                 logger.LogCritical("Missing configuration for S3 bucket. The AppS3Bucket configuration must be set to a S3 bucket.");

@@ -23,7 +23,7 @@ namespace destino_redacao_1000_api
             _log = logger.CreateLogger("UploadFileAWS");            
         }
 
-        public async Task<string> UploadFileAsync(Stream fileStream, string keyName)
+        public async Task<string> UploadFileAsync(Usuario usuario, Stream fileStream, string keyName)
         {
             string urlLocation = null;
 
@@ -35,7 +35,7 @@ namespace destino_redacao_1000_api
                 {
                     var bucketName = _configuration["Website:S3Bucket"];
                     var fileTransferUtility = new TransferUtility(client);
-                    var fileLocation = "usuarios/fotos/" + keyName;
+                    var fileLocation = GetFileLocation(usuario, keyName);
                     _log.LogInformation("location: {0}", fileLocation);
                     await fileTransferUtility.UploadAsync(fileStream, bucketName, fileLocation);
                     urlLocation = $"{_configuration["Website:S3BucketUrl"]}/{fileLocation}";
@@ -53,7 +53,7 @@ namespace destino_redacao_1000_api
             return urlLocation;
         }
 
-        public async Task<string> DeleteFileAsync(string keyName)
+        public async Task<string> DeleteFileAsync(Usuario usuario, string keyName)
         {
             string urlLocation = null;
 
@@ -62,7 +62,7 @@ namespace destino_redacao_1000_api
                 using (var client = new AmazonS3Client(RegionEndpoint.SAEast1))
                 {
                     var bucketName = _configuration["Website:S3Bucket"];
-                    var fileLocation = $"usuarios/fotos/{keyName}";
+                    var fileLocation = GetFileLocation(usuario, keyName);
                     var resp = await client.DeleteObjectAsync(bucketName, fileLocation);
                 }
             }
@@ -76,8 +76,12 @@ namespace destino_redacao_1000_api
                 _log.LogError("Unknown error encountered on server when deleting object. Message:'{0}'", e.Message);
             }
             return urlLocation;
-        }        
+        }  
 
+        private string GetFileLocation(Usuario usuario, string keyName)
+        {
+            return $"usuarios/{usuario.Id}/{keyName}";
+        }        
     }
 
 }
