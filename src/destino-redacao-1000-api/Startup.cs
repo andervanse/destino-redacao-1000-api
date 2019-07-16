@@ -33,7 +33,7 @@ namespace destino_redacao_1000_api
             services.AddScoped<IEmailSender, ZohoEmailSender>();
             services.AddScoped<IEmailLoginConfirmation, EmailLoginConfirmation>();
             services.AddScoped<IUsuarioRepository, UsuarioRepository>();
-            services.AddScoped<IArquivoRepository, ArquivoRepository>();
+            services.AddScoped<IRevisaoRepository, RevisaoRepository>();
             services.AddScoped<IUploadFile, AWSUploadFile>();
             services.AddSingleton<IConfiguration>(x => Configuration);            
 
@@ -57,6 +57,7 @@ namespace destino_redacao_1000_api
                     .SetCompatibilityVersion(CompatibilityVersion.Version_2_1)
                     .AddJsonOptions(options => {
                         options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
+                        options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
                     });
 
             // Add S3 to the ASP.NET Core dependency injection framework.

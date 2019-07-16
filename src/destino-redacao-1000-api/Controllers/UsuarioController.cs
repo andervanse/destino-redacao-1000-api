@@ -52,7 +52,8 @@ namespace destino_redacao_1000_api
                 Login = loginUsuario.Login,
                 Nome  = loginUsuario.Nome,
                 Email = loginUsuario.Login,
-                Senha = loginUsuario.Senha              
+                Senha = loginUsuario.Senha,
+                TipoUsuario = TipoUsuario.Assinante              
             };
 
             var response = await _userRepo.ObterUsuarioAsync(user);
@@ -93,7 +94,8 @@ namespace destino_redacao_1000_api
                 Login = loginUsuario.Login,
                 Nome  = loginUsuario.Nome,
                 Email = loginUsuario.Login,
-                Senha = loginUsuario.Senha       
+                Senha = loginUsuario.Senha,
+                TipoUsuario = TipoUsuario.Assinante       
             };
 
             var response = await _userRepo.ObterUsuarioAsync(user);

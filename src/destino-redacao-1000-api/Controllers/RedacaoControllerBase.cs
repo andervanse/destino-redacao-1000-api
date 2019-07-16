@@ -47,11 +47,15 @@ namespace destino_redacao_1000_api
                 var usuario = new Usuario();
                 string id = principal.Claims.FirstOrDefault(x => x.Properties.FirstOrDefault().Value == JwtRegisteredClaimNames.NameId)?.Value;
                 string login = principal.Claims.FirstOrDefault(x => x.Properties.FirstOrDefault().Value == JwtRegisteredClaimNames.UniqueName)?.Value;
-                bool admin = principal.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role)?.Value == "Admin";
+                string tpUsuario = principal.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role)?.Value;
 
                 usuario.Id = int.Parse(id);
                 usuario.Login = login; 
-                usuario.Administrador = admin;
+                Object tpUser = null;
+                Enum.TryParse(typeof(TipoUsuario), tpUsuario, true, out tpUser);
+                
+                if (tpUser != null)         
+                  usuario.TipoUsuario = (TipoUsuario)tpUser;
 
                 return usuario;
             }

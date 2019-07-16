@@ -66,8 +66,7 @@ namespace destino_redacao_1000_api
                     new Claim(JwtRegisteredClaimNames.NameId, response.Return.Id.ToString())
                 };
 
-                if (response.Return.Administrador)
-                    claims.Add(new Claim(ClaimTypes.Role, Role.Admin));
+                claims.Add(new Claim(ClaimTypes.Role, user.TipoUsuario.ToString()));
 
                 var token = new JwtSecurityToken(
                                   issuer: _config["Token:Issuer"],
@@ -87,7 +86,8 @@ namespace destino_redacao_1000_api
                             Id = response.Return.Id,
                             Nome = response.Return.Nome,
                             Email = response.Return.Email,
-                            Celular = response.Return.Celular
+                            Celular = response.Return.Celular,
+                            DataAtualizacao = DateTime.Now
                         }
                 });
             }

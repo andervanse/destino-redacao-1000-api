@@ -13,30 +13,46 @@ namespace destino_redacao_1000_api
 {
     [Authorize]
     [Route("api/[controller]")]
-    public class ArquivoController : RedacaoControllerBase
+    public class RevisaoController : RedacaoControllerBase
     {
         private readonly IUploadFile _uploadFile;
         private readonly IUsuarioRepository _usuarioRepository;
-        private readonly IArquivoRepository _arquivoRepository;
+        private readonly IRevisaoRepository _revisaoRepository;
         private readonly ILogger _logger;
 
-        public ArquivoController(
+        public RevisaoController(
             IUsuarioRepository usuarioRepository,
-            IArquivoRepository arquivoRepository,
+            IRevisaoRepository revisaoRepository,
             IUploadFile uploadFile,
             IConfiguration configuration,
-            ILogger<ArquivoController> logger) : base(configuration, logger)
+            ILogger<RevisaoController> logger) : base(configuration, logger)
         {
             _usuarioRepository = usuarioRepository;
-            _arquivoRepository = arquivoRepository;
+            _revisaoRepository = revisaoRepository;
             _uploadFile = uploadFile;            
             _logger = logger;
+        }
+
+        [HttpGet("{userLogin}")]
+        public async Task<ActionResult> Get(string userLogin)
+        {
+            var usuario = ObterUsuario();
+            var response = await _revisaoRepository.ObterListaAsync(usuario);
+
+            if (response.HasError)
+            {
+                _logger.LogError("Lista", response.ErrorMessages);
+                return BadRequest(response.ErrorMessages);                
+            }
+
+            return Ok(response.Return);
         }
 
         [HttpPost]
         public async Task<IActionResult> Post([FromForm] IFormCollection form)
         {
             long size = form.Files.Sum(f => f.Length);
+            string comentario = form["comentario"];
 
             if (size > 0)
             {
@@ -61,14 +77,19 @@ namespace destino_redacao_1000_api
 
                                 if (!String.IsNullOrEmpty(urlLocation))
                                 {
-                                    var arquivo = new Arquivo
+                                    var revisao = new Revisao
                                     {
-                                        Nome = formFile.FileName,
                                         UsuarioId = usuario.Id,
-                                        Url = urlLocation
+                                        Arquivo = new Arquivo
+                                        {
+                                            Nome = formFile.FileName,
+                                            Url = urlLocation,
+                                            DataAtualizacao = DateTime.Now
+                                        },
+                                        Comentario = comentario
                                     };
 
-                                    var response = await _arquivoRepository.SalvarAsync(arquivo);
+                                    var response = await _revisaoRepository.SalvarAsync(revisao);
 
                                     if (response.HasError)
                                     {
@@ -101,7 +122,7 @@ namespace destino_redacao_1000_api
             }
             else
             {
-                return BadRequest("Empty file");
+                return BadRequest("Arquivo inválido.");
             }
         }
 

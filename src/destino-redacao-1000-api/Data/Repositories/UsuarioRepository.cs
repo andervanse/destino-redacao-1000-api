@@ -39,6 +39,10 @@ namespace destino_redacao_1000_api
                     exprAttrValues.Add(":dtAt", new AttributeValue { S = user.DataAtualizacao.Value.ToString("dd/MM/yyyy hh:mm:ss") });
                     updExp.Append(" #dtAt = :dtAt,");
                     exprAttrNames.Add("#dtAt", "dt-atualizacao");
+                    
+                    exprAttrValues.Add(":tpUsuario", new AttributeValue { S = user.TipoUsuario.ToString() });
+                    updExp.Append(" #tpUsuario = :tpUsuario,");
+                    exprAttrNames.Add("#tpUsuario", "tp-usuario");                    
                    
                     if (!String.IsNullOrEmpty(user.Senha))
                     {
@@ -344,9 +348,13 @@ namespace destino_redacao_1000_api
                     {
                         usuario.EmailConfirmado = value.BOOL;
                     }                                      
-                    else if (attributeName == "admin")
+                    else if (attributeName == "tp-usuario")
                     {
-                        usuario.Administrador = value.BOOL;
+                        Object tpUser = null;
+                        Enum.TryParse(typeof(TipoUsuario), value.S, true, out tpUser);
+                        
+                        if (tpUser != null)         
+                          usuario.TipoUsuario = (TipoUsuario)tpUser;
                     }
                 }
                 list.Add(usuario);

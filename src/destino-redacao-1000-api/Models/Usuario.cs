@@ -18,7 +18,9 @@ namespace destino_redacao_1000_api
         public string Celular { get; set; }   
         public string UrlFoto {get; set; }     
         public bool? EmailConfirmado { get; set; }
-        public string CodigoEmailConfirmacao { get; set; }
-        public bool Administrador { get; set; }
+        public string CodigoEmailConfirmacao { get; set; }     
+        public TipoUsuario TipoUsuario { get; set; }
     }
+
+    public enum TipoUsuario { Assinante, Revisor }
 }

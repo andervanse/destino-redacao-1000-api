@@ -1,0 +1,246 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading.Tasks;
+using Amazon.DynamoDBv2.Model;
+using Microsoft.Extensions.Logging;
+
+namespace destino_redacao_1000_api
+{
+    public class RevisaoRepository :IRevisaoRepository
+    {
+        private readonly DynamoDbContext _context;
+        private readonly ILogger _logger;
+
+        public RevisaoRepository(DynamoDbContext context, ILogger<RevisaoRepository> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
+
+        public async Task<Response<Revisao>> SalvarAsync(Revisao revisao)
+        {
+            var resp = new Response<Revisao>();
+
+            using (var client = this._context.GetClientInstance())
+            {
+                try
+                {
+                    StringBuilder updExp = new StringBuilder("SET ");
+                    var exprAttrValues = new Dictionary<string, AttributeValue>();
+                    var exprAttrNames = new Dictionary<string, string>();
+
+                    if (revisao.Id < 1)
+                    {
+                        revisao.Id = (Int32)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                        //exprAttrValues.Add(":revisaoId", new AttributeValue { S = revisao.Id.ToString() });
+                        //updExp.Append(" #revisaoId = :revisaoId,");
+                        //exprAttrNames.Add("#revisaoId", "id");
+                    }
+
+                    revisao.DataPrevista = DateTime.Now.AddDays(4);
+                    exprAttrValues.Add(":dtPrev", new AttributeValue { S = revisao.DataPrevista.ToString("dd/MM/yyyy hh:mm:ss") });
+                    updExp.Append(" #dtPrev = :dtPrev,");
+                    exprAttrNames.Add("#dtPrev", "dt-prevista");     
+
+                    exprAttrValues.Add(":usrId", new AttributeValue { N = revisao.UsuarioId.ToString() });
+                    updExp.Append(" #usrId = :usrId,");
+                    exprAttrNames.Add("#usrId", "usuario-id"); 
+
+                    exprAttrValues.Add(":status", new AttributeValue { S = revisao.StatusRevisao.ToString() });
+                    updExp.Append(" #status = :status,");
+                    exprAttrNames.Add("#status", "status");
+
+                    if (revisao.Arquivo != null)
+                    {
+                        revisao.Arquivo.DataAtualizacao = DateTime.Now;
+                        exprAttrValues.Add(":dtAt", new AttributeValue { S = revisao.Arquivo.DataAtualizacao.ToString("dd/MM/yyyy hh:mm:ss") });
+                        updExp.Append(" #dtAt = :dtAt,");
+                        exprAttrNames.Add("#dtAt", "dt-atualizacao"); 
+
+                        if (!String.IsNullOrEmpty(revisao.Arquivo.Nome))
+                        {
+                            exprAttrValues.Add(":nome", new AttributeValue { S = revisao.Arquivo.Nome });
+                            updExp.Append(" #nome = :nome,");
+                            exprAttrNames.Add("#nome", "nome");                        
+                        }
+
+                        if (!String.IsNullOrEmpty(revisao.Arquivo.Url))
+                        {
+                            exprAttrValues.Add(":url", new AttributeValue { S = revisao.Arquivo.Url });
+                            updExp.Append(" #url = :url,");
+                            exprAttrNames.Add("#url", "url");                        
+                        }
+                    }
+
+                    if (!String.IsNullOrEmpty(revisao.Comentario))
+                    {
+                        exprAttrValues.Add(":comentario", new AttributeValue { S = revisao.Comentario });
+                        updExp.Append(" #comentario = :comentario,");
+                        exprAttrNames.Add("#comentario", "comentario");                        
+                    }                    
+
+                    var request = new UpdateItemRequest
+                    {
+                        TableName = _context.TableName,
+                        Key = new Dictionary<string, AttributeValue>
+                            {
+                                { "tipo", new AttributeValue { S = $"revisao-{revisao.UsuarioId}" } },
+                                { "id", new AttributeValue { N = revisao.Id.ToString() } }
+                            },
+
+                        ExpressionAttributeNames = exprAttrNames,
+                        ExpressionAttributeValues = exprAttrValues,
+                        UpdateExpression = updExp.ToString().Substring(0, updExp.ToString().Length - 1)
+                    };
+
+                    var updResp = await client.UpdateItemAsync(request);
+                    resp.Return = revisao;
+
+                    return resp;
+                }
+                catch (Exception e)
+                {
+                    resp.Return = revisao;
+                    resp.ErrorMessages.Add(e.Message);
+                    _logger.LogError(e.Message);
+                    return resp;
+                }
+            }
+        }
+
+        public async Task<Response<List<Revisao>>> ObterListaAsync(Usuario usuario)
+        {
+            var resp = new Response<List<Revisao>>();
+            QueryResponse response = await ObterArquivoResponseAsync<List<Revisao>>(usuario, resp);
+            List<Revisao> lstUser = ExtractFileFrom(response.Items);
+            resp.Return = lstUser;
+            return resp;
+        }
+
+        public async Task<Response<Revisao>> ObterArquivoAsync(Usuario usuario, String urlArquivo)
+        {
+            var resp = new Response<Revisao>();
+            QueryResponse response = await ObterArquivoResponseAsync<Revisao>(usuario, resp);
+            List<Revisao> lstArquivo = ExtractFileFrom(response.Items);
+
+            if (lstArquivo.Count > 0)
+                resp.Return = lstArquivo[0];
+            else
+                resp.Messages.Add("Nenhum registro encontrado.");
+
+            return resp;
+        }
+
+        private async Task<QueryResponse> ObterArquivoResponseAsync<T>(Usuario usuario, Response<T> resp)
+        {            
+            QueryResponse response = null;
+
+            using (var client = this._context.GetClientInstance())
+            {
+                QueryRequest request = ObterRevisaoQueryRequest(usuario);
+
+                try
+                {
+                    response = await client.QueryAsync(request);
+                }
+                catch (Exception e)
+                {
+                    resp.ErrorMessages.Add(e.Message);
+                    _logger.LogError(e.Message);
+                }
+            }
+
+            return response;
+        }
+
+        private QueryRequest ObterRevisaoQueryRequest(Usuario usuario)
+        {
+            string filterExpr = null;
+            string keyExpr = "#tipo = :t";
+
+            return new QueryRequest
+            {
+                TableName = _context.TableName,
+                KeyConditionExpression = keyExpr,
+                FilterExpression = filterExpr,
+                ExpressionAttributeNames = new Dictionary<string, string> {
+                        { "#id", "id" },
+                        { "#tipo", "tipo" },
+                        { "#nome", "nome" },
+                        { "#usrId", "usuario-id" },
+                        { "#dtAt", "dt-atualizacao" },
+                        { "#url", "url" },
+                        { "#comentario", "comentario" },
+                        { "#dtPrev", "dt-prevista" },
+                        { "#status", "status" }
+                    },
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                    {
+                         { ":t", new AttributeValue { S = $"revisao-{usuario.Id}" } }
+                    },
+                ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status"
+            };
+        }
+
+        private List<Revisao> ExtractFileFrom(List<Dictionary<string, AttributeValue>> dictionary)
+        {
+            List<Revisao> list = new List<Revisao>();
+            Revisao revisao = null;
+
+            foreach (var item in dictionary)
+            {
+                revisao = new Revisao();                
+
+                foreach (KeyValuePair<string, AttributeValue> kvp in item)
+                {
+                    string attributeName = kvp.Key;
+                    AttributeValue value = kvp.Value;
+
+                    if (attributeName == "id")
+                    {
+                        revisao.Id = int.Parse(value.N);
+                    }
+                    else if (attributeName == "nome")
+                    {
+                        revisao.Arquivo.Nome = value.S;
+                    }                  
+                    else if (attributeName == "url")
+                    {
+                        revisao.Arquivo.Url = value.S;
+                    }
+                    else if (attributeName == "comentario")
+                    {
+                        revisao.Comentario = value.S;
+                    }  
+                    else if (attributeName == "usuario-id")
+                    {
+                        int id = 0;
+                        int.TryParse(value.N, out id);
+                        revisao.UsuarioId = id;
+                    }                     
+                    else if (attributeName == "status")
+                    {
+                        Object st = null;
+                        Enum.TryParse(typeof(StatusRevisao), value.S, true, out st);
+                        revisao.StatusRevisao = (StatusRevisao)st;                        
+                    }
+                    else if (attributeName == "dt-prevista")
+                    {
+                        DateTime dtPrev;
+                        DateTime.TryParse(value.S, out dtPrev);
+                        revisao.DataPrevista = dtPrev;
+                    }                                                                                
+                    else if (attributeName == "dt-atualizacao")
+                    {
+                        DateTime dtAtual;
+                        DateTime.TryParse(value.S, out dtAtual);
+                        revisao.Arquivo.DataAtualizacao = dtAtual;
+                    }                    
+                }
+                list.Add(revisao);
+            }
+            return list;
+        }
+    }
+}
