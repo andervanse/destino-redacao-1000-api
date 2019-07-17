@@ -13,8 +13,7 @@ namespace destino_redacao_1000_api
         public string Email { get; set; } 
         public string Senha { get; set; }
         public string Salt { get; set; }
-        public string HashedPassword { get; set; }
-        
+        public string HashedPassword { get; set; }        
         public string Celular { get; set; }   
         public string UrlFoto {get; set; }     
         public bool? EmailConfirmado { get; set; }

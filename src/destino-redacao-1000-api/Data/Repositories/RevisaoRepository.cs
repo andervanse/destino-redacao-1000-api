@@ -43,9 +43,13 @@ namespace destino_redacao_1000_api
                     updExp.Append(" #dtPrev = :dtPrev,");
                     exprAttrNames.Add("#dtPrev", "dt-prevista");     
 
-                    exprAttrValues.Add(":usrId", new AttributeValue { N = revisao.UsuarioId.ToString() });
+                    exprAttrValues.Add(":usrId", new AttributeValue { N = revisao.AssinanteId.ToString() });
                     updExp.Append(" #usrId = :usrId,");
-                    exprAttrNames.Add("#usrId", "usuario-id"); 
+                    exprAttrNames.Add("#usrId", "assinante-id"); 
+
+                    exprAttrValues.Add(":revId", new AttributeValue { N = revisao.RevisorId.ToString() });
+                    updExp.Append(" #revId = :revId,");
+                    exprAttrNames.Add("#revId", "revisor-id");                     
 
                     exprAttrValues.Add(":status", new AttributeValue { S = revisao.StatusRevisao.ToString() });
                     updExp.Append(" #status = :status,");
@@ -85,7 +89,7 @@ namespace destino_redacao_1000_api
                         TableName = _context.TableName,
                         Key = new Dictionary<string, AttributeValue>
                             {
-                                { "tipo", new AttributeValue { S = $"revisao-{revisao.UsuarioId}" } },
+                                { "tipo", new AttributeValue { S = $"revisao" } },
                                 { "id", new AttributeValue { N = revisao.Id.ToString() } }
                             },
 
@@ -112,16 +116,16 @@ namespace destino_redacao_1000_api
         public async Task<Response<List<Revisao>>> ObterListaAsync(Usuario usuario)
         {
             var resp = new Response<List<Revisao>>();
-            QueryResponse response = await ObterArquivoResponseAsync<List<Revisao>>(usuario, resp);
-            List<Revisao> lstUser = ExtractFileFrom(response.Items);
-            resp.Return = lstUser;
+            QueryResponse response = await ObterRevisaoResponseAsync<List<Revisao>>(usuario, resp);
+            List<Revisao> revisoes = ExtractFileFrom(response.Items);
+            resp.Return = revisoes;
             return resp;
         }
 
-        public async Task<Response<Revisao>> ObterArquivoAsync(Usuario usuario, String urlArquivo)
+        public async Task<Response<Revisao>> ObterRevisaoAsync(Usuario usuario, String urlArquivo)
         {
             var resp = new Response<Revisao>();
-            QueryResponse response = await ObterArquivoResponseAsync<Revisao>(usuario, resp);
+            QueryResponse response = await ObterRevisaoResponseAsync<Revisao>(usuario, resp);
             List<Revisao> lstArquivo = ExtractFileFrom(response.Items);
 
             if (lstArquivo.Count > 0)
@@ -132,7 +136,98 @@ namespace destino_redacao_1000_api
             return resp;
         }
 
-        private async Task<QueryResponse> ObterArquivoResponseAsync<T>(Usuario usuario, Response<T> resp)
+        public async Task<Response<List<Revisao>>> ObterNovasRevisoesAsync(Usuario usuario)
+        {
+            var resp = new Response<List<Revisao>>();
+            QueryResponse response = null;
+
+            using (var client = this._context.GetClientInstance())
+            {
+                QueryRequest request = new QueryRequest
+                {
+                        TableName = _context.TableName,
+                        KeyConditionExpression = "#tipo = :tipo",
+                        ExpressionAttributeNames = new Dictionary<string, string> {
+                            { "#id", "id" },
+                            { "#tipo", "tipo" },
+                            { "#nome", "nome" },
+                            { "#usrId", "assinante-id" },
+                            { "#dtAt", "dt-atualizacao" },
+                            { "#url", "url" },
+                            { "#comentario", "comentario" },
+                            { "#dtPrev", "dt-prevista" },
+                            { "#status", "status" }
+                        },
+                        FilterExpression = "#status = :status",
+                        ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                        {
+                            { ":tipo", new AttributeValue { S = "revisao" } },
+                            { ":status", new AttributeValue { S = "NovaRevisao"} }
+                        },
+                        
+                        ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status"
+                    };                
+
+                try
+                {
+                    response = await client.QueryAsync(request);
+                }
+                catch (Exception e)
+                {
+                    resp.ErrorMessages.Add(e.Message);
+                    _logger.LogError(e.Message);
+                }
+            }
+            
+            List<Revisao> revisoes = ExtractFileFrom(response.Items);
+            resp.Return = revisoes;
+            return resp;
+        }
+
+        public async Task<Response<Revisao>> AtualizarRevisorAsync(Revisao revisao)
+        {
+            var resp = new Response<Revisao>();
+
+            using (var client = this._context.GetClientInstance())
+            {
+                try
+                {
+                    var request = new UpdateItemRequest
+                    {
+                        TableName = _context.TableName,
+                        Key = new Dictionary<string, AttributeValue>
+                        {
+                            { "tipo", new AttributeValue { S = $"revisao" } },
+                            { "id", new AttributeValue { N = revisao.Id.ToString() } }
+                        },
+                        ExpressionAttributeNames = new Dictionary<string, string>
+                        {
+                            { "#usrId", "assinante-id" },
+                            { "#revId", "revisor-id" }
+                        },
+                        ExpressionAttributeValues =  new Dictionary<string, AttributeValue>
+                        {
+                            {":usrId", new AttributeValue { N = revisao.AssinanteId.ToString() }},
+                            {":revId", new AttributeValue { N = revisao.RevisorId.ToString() }}
+                        },
+                        UpdateExpression = "SET #usrId = :usrId, #revId = :revId"
+                    };
+
+                    var updResp = await client.UpdateItemAsync(request);
+                    resp.Return = revisao;
+                    return resp;
+                }
+                catch (Exception e)
+                {
+                    resp.Return = revisao;
+                    resp.ErrorMessages.Add(e.Message);
+                    _logger.LogError(e.Message);
+                    return resp;
+                }
+            }
+        }        
+
+        private async Task<QueryResponse> ObterRevisaoResponseAsync<T>(Usuario usuario, Response<T> resp)
         {            
             QueryResponse response = null;
 
@@ -156,29 +251,27 @@ namespace destino_redacao_1000_api
 
         private QueryRequest ObterRevisaoQueryRequest(Usuario usuario)
         {
-            string filterExpr = null;
             string keyExpr = "#tipo = :t";
 
             return new QueryRequest
             {
                 TableName = _context.TableName,
                 KeyConditionExpression = keyExpr,
-                FilterExpression = filterExpr,
                 ExpressionAttributeNames = new Dictionary<string, string> {
-                        { "#id", "id" },
-                        { "#tipo", "tipo" },
-                        { "#nome", "nome" },
-                        { "#usrId", "usuario-id" },
-                        { "#dtAt", "dt-atualizacao" },
-                        { "#url", "url" },
-                        { "#comentario", "comentario" },
-                        { "#dtPrev", "dt-prevista" },
-                        { "#status", "status" }
-                    },
+                    { "#id", "id" },
+                    { "#tipo", "tipo" },
+                    { "#nome", "nome" },
+                    { "#usrId", "assinante-id" },
+                    { "#dtAt", "dt-atualizacao" },
+                    { "#url", "url" },
+                    { "#comentario", "comentario" },
+                    { "#dtPrev", "dt-prevista" },
+                    { "#status", "status" }
+                },
                 ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-                    {
-                         { ":t", new AttributeValue { S = $"revisao-{usuario.Id}" } }
-                    },
+                {
+                    { ":t", new AttributeValue { S = "revisao" } }
+                },
                 ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status"
             };
         }
@@ -213,11 +306,11 @@ namespace destino_redacao_1000_api
                     {
                         revisao.Comentario = value.S;
                     }  
-                    else if (attributeName == "usuario-id")
+                    else if (attributeName == "assinante-id")
                     {
                         int id = 0;
                         int.TryParse(value.N, out id);
-                        revisao.UsuarioId = id;
+                        revisao.AssinanteId = id;
                     }                     
                     else if (attributeName == "status")
                     {

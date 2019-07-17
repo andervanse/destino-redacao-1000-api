@@ -48,6 +48,50 @@ namespace destino_redacao_1000_api
             return Ok(response.Return);
         }
 
+        [HttpGet("NovasRevisoes")]
+        public async Task<ActionResult> GetNovasRevisoes()
+        {
+            var usuario = ObterUsuario();
+
+            if (usuario.TipoUsuario == TipoUsuario.Assinante)
+               return BadRequest(new { message = "Usuário inválido." });
+
+            var response = await _revisaoRepository.ObterNovasRevisoesAsync(usuario);
+
+            if (response.HasError)
+            {
+                _logger.LogError("Lista", response.ErrorMessages);
+                return BadRequest(response.ErrorMessages);                
+            }
+
+            return Ok(response.Return);
+        }  
+
+        [HttpPatch("{id}")]
+        public async Task<ActionResult> Patch(int id, [FromBody] AtualizaNovaRevisaoViewModel atualizaRevisao)
+        {
+            var revisor = ObterUsuario();
+
+            if (revisor.TipoUsuario == TipoUsuario.Assinante)
+               return BadRequest(new { message = "Usuário inválido." });
+            
+            var revisao = new Revisao {
+                Id = atualizaRevisao.RevisaoId,
+                AssinanteId = atualizaRevisao.AssinanteId,
+                RevisorId = revisor.Id                
+            };
+
+            var response = await _revisaoRepository.AtualizarRevisorAsync(revisao);
+
+            if (response.HasError)
+            {
+                _logger.LogError("Lista", response.ErrorMessages);
+                return BadRequest(response.ErrorMessages);                
+            }
+
+            return Ok();
+        }               
+
         [HttpPost]
         public async Task<IActionResult> Post([FromForm] IFormCollection form)
         {
@@ -79,7 +123,7 @@ namespace destino_redacao_1000_api
                                 {
                                     var revisao = new Revisao
                                     {
-                                        UsuarioId = usuario.Id,
+                                        AssinanteId = usuario.Id,
                                         Arquivo = new Arquivo
                                         {
                                             Nome = formFile.FileName,
@@ -118,7 +162,7 @@ namespace destino_redacao_1000_api
                     }
                 }
 
-                return Ok(new { urlLocation = urlLocation });
+                return Created(urlLocation, new { message = "Created" });
             }
             else
             {

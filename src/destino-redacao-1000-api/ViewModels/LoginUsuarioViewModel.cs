@@ -9,7 +9,7 @@ namespace destino_redacao_1000_api
         [MinLength(8, ErrorMessage="Tamanho mínimo de 8 caracteres")]
         public string Login { get; set; }
 
-        [MinLength(8, ErrorMessage="Tamanho mínimo de 8 caracteres")]
+        [MinLength(4, ErrorMessage="Tamanho mínimo de 4 caracteres")]
         public string Nome { get; set; }
 
         [Required(ErrorMessage="Campo obrigatório")]

@@ -10,15 +10,15 @@ namespace destino_redacao_1000_api
     [Authorize]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    public class UserController :Controller
+    public class UsuarioController :Controller
     {
         private readonly IUsuarioRepository _userRepo;
         private readonly IEmailLoginConfirmation _emailLoginConfirmation;
         private readonly IConfiguration _configuration;
 
-        public UserController(IUsuarioRepository userRepo,
-                              IEmailLoginConfirmation emailLoginConfirmation,
-                              IConfiguration configuration)
+        public UsuarioController(IUsuarioRepository userRepo,
+                                 IEmailLoginConfirmation emailLoginConfirmation,
+                                 IConfiguration configuration)
         {
             _userRepo = userRepo;
             _emailLoginConfirmation = emailLoginConfirmation;
@@ -89,7 +89,7 @@ namespace destino_redacao_1000_api
                 return BadRequest(ModelState);
             }
             
-            var user = new Usuario 
+            var usuario = new Usuario 
             {
                 Login = loginUsuario.Login,
                 Nome  = loginUsuario.Nome,
@@ -98,7 +98,7 @@ namespace destino_redacao_1000_api
                 TipoUsuario = TipoUsuario.Assinante       
             };
 
-            var response = await _userRepo.ObterUsuarioAsync(user);
+            var response = await _userRepo.ObterUsuarioAsync(usuario);
 
             if (response.HasError)
                return BadRequest(response.ErrorMessages);
@@ -109,7 +109,9 @@ namespace destino_redacao_1000_api
                 return BadRequest(ModelState);
             }
 
-            response = await _userRepo.SalvarAsync(user);
+            usuario.Id = response.Return.Id;
+            usuario.Email = response.Return.Email;
+            response = await _userRepo.SalvarAsync(usuario);
 
             if (response.HasError)            
                return BadRequest(response.ErrorMessages);
@@ -125,7 +127,7 @@ namespace destino_redacao_1000_api
 
             return CreatedAtRoute(routeName: "GetUser",
                                 routeValues: new { id = usuario.Id },
-                                      value: new { user = new { name = usuario.Nome, email = usuario.Email } });
+                                      value: new { usuario = new { name = usuario.Nome, email = usuario.Email } });
         }                    
     }
 }

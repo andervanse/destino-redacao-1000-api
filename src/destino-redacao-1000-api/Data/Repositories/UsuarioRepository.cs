@@ -83,14 +83,7 @@ namespace destino_redacao_1000_api
                         exprAttrValues.Add(":celular", new AttributeValue { S = user.Celular });
                         updExp.Append(" #celular = :celular,");
                         exprAttrNames.Add("#celular", "celular");
-                    }
-
-                    if (!String.IsNullOrEmpty(user.UrlFoto))
-                    {
-                        exprAttrValues.Add(":urlFoto", new AttributeValue { S = user.UrlFoto });
-                        updExp.Append(" #urlFoto = :urlFoto,");
-                        exprAttrNames.Add("#urlFoto", "url-foto");
-                    }                             
+                    }                          
 
                     if (String.IsNullOrEmpty(user.CodigoEmailConfirmacao))
                     {
@@ -145,7 +138,7 @@ namespace destino_redacao_1000_api
 
             using (var client = this._context.GetClientInstance())
             {
-                QueryRequest request = ObterUsuarioQueryRequest("login", new AttributeValue { S = user.Login });
+                QueryRequest request = ObterUsuarioQueryRequest("email", new AttributeValue { S = user.Login });
                 QueryResponse response = null;
 
                 try
@@ -275,16 +268,16 @@ namespace destino_redacao_1000_api
                         { "#salt", "salt" },
                         { "#email", "email" },
                         { "#celular", "celular" },
-                        { "#urlFoto", "url-foto" },
                         { "#codEmail", "cod-email" },
+                        { "#tipoUsr", "tp-usuario" },
                         { "#emailConfirmado", "email-confirmado" }
-                    },
+                },
                 ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-                    {
-                         { ":t", new AttributeValue { S = "usuario" } },
-                         { $":{attrName}", attrValue }
-                    },
-                ProjectionExpression = "#id, #login, #nome, #dtAt, #hashedPassword, #salt, #email, #celular, #urlFoto, #codEmail, #emailConfirmado"
+                {
+                    { ":t", new AttributeValue { S = "usuario" } },
+                    { $":{attrName}", attrValue }
+                },
+                ProjectionExpression = "#id, #tipo, #login, #nome, #dtAt, #hashedPassword, #salt, #email, #celular, #codEmail, #tipoUsr, #emailConfirmado"
             };
         }
 
