@@ -69,25 +69,24 @@ namespace destino_redacao_1000_api
                 claims.Add(new Claim(ClaimTypes.Role, response.Return.TipoUsuario.ToString()));
 
                 var token = new JwtSecurityToken(
-                                  issuer: _config["Token:Issuer"],
-                                  audience: _config["Token:Audience"],
-                                  claims: claims,
-                                  expires: DateTime.UtcNow.AddHours(6),
-                                  signingCredentials: new SigningCredentials(
-                                                    new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Token:Key"])),
-                                                    SecurityAlgorithms.HmacSha256));
+                                issuer: _config["Token:Issuer"],
+                                audience: _config["Token:Audience"],
+                                claims: claims,
+                                expires: DateTime.UtcNow.AddHours(6),
+                                signingCredentials: new SigningCredentials(
+                                                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Token:Key"])),
+                                                SecurityAlgorithms.HmacSha256));
 
                 var handler = new JwtSecurityTokenHandler();
                 var jwtToken = handler.WriteToken(token);
                 return Ok(new { 
                     token = jwtToken,
                     usuario = new UsuarioViewModel
-                        {
-                            Id = response.Return.Id,
-                            Nome = response.Return.Nome,
-                            Email = response.Return.Email,
-                            DataAtualizacao = DateTime.Now
-                        }
+                    {
+                        Nome = response.Return.Nome,
+                        Email = response.Return.Email,
+                        DataAtualizacao = DateTime.Now
+                    }
                 });
             }
             else

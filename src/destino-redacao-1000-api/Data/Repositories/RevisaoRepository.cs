@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2.Model;
@@ -113,29 +114,6 @@ namespace destino_redacao_1000_api
             }
         }
 
-        public async Task<Response<List<Revisao>>> ObterListaAsync(Usuario usuario)
-        {
-            var resp = new Response<List<Revisao>>();
-            QueryResponse response = await ObterRevisaoResponseAsync<List<Revisao>>(usuario, resp);
-            List<Revisao> revisoes = ExtractFileFrom(response.Items);
-            resp.Return = revisoes;
-            return resp;
-        }
-
-        public async Task<Response<Revisao>> ObterRevisaoAsync(Usuario usuario, String urlArquivo)
-        {
-            var resp = new Response<Revisao>();
-            QueryResponse response = await ObterRevisaoResponseAsync<Revisao>(usuario, resp);
-            List<Revisao> lstArquivo = ExtractFileFrom(response.Items);
-
-            if (lstArquivo.Count > 0)
-                resp.Return = lstArquivo[0];
-            else
-                resp.Messages.Add("Nenhum registro encontrado.");
-
-            return resp;
-        }
-
         public async Task<Response<List<Revisao>>> ObterNovasRevisoesAsync(Usuario usuario)
         {
             var resp = new Response<List<Revisao>>();
@@ -145,28 +123,29 @@ namespace destino_redacao_1000_api
             {
                 QueryRequest request = new QueryRequest
                 {
-                        TableName = _context.TableName,
-                        KeyConditionExpression = "#tipo = :tipo",
-                        ExpressionAttributeNames = new Dictionary<string, string> {
-                            { "#id", "id" },
-                            { "#tipo", "tipo" },
-                            { "#nome", "nome" },
-                            { "#usrId", "assinante-id" },
-                            { "#dtAt", "dt-atualizacao" },
-                            { "#url", "url" },
-                            { "#comentario", "comentario" },
-                            { "#dtPrev", "dt-prevista" },
-                            { "#status", "status" }
-                        },
-                        FilterExpression = "#status = :status",
-                        ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-                        {
-                            { ":tipo", new AttributeValue { S = "revisao" } },
-                            { ":status", new AttributeValue { S = "NovaRevisao"} }
-                        },
+                    TableName = _context.TableName,
+                    KeyConditionExpression = "#tipo = :tipo",
+                    ExpressionAttributeNames = new Dictionary<string, string> {
+                        { "#id", "id" },
+                        { "#tipo", "tipo" },
+                        { "#nome", "nome" },
+                        { "#usrId", "assinante-id" },
+                        { "#dtAt", "dt-atualizacao" },
+                        { "#url", "url" },
+                        { "#comentario", "comentario" },
+                        { "#dtPrev", "dt-prevista" },
+                        { "#status", "status" },
+                        { "#revisorId", "revisor-id" }
+                    },
+                    FilterExpression = "#status = :status",
+                    ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                    {
+                        { ":tipo", new AttributeValue { S = "revisao" } },
+                        { ":status", new AttributeValue { S = "NovaRevisao"} }
+                    },
                         
-                        ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status"
-                    };                
+                    ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
+                };                
 
                 try
                 {
@@ -183,6 +162,56 @@ namespace destino_redacao_1000_api
             resp.Return = revisoes;
             return resp;
         }
+
+        public async Task<Response<List<Revisao>>> ObterRevisoesPendentesAsync(Usuario usuario)
+        {
+            var resp = new Response<List<Revisao>>();
+            QueryResponse response = null;
+
+            using (var client = this._context.GetClientInstance())
+            {
+                QueryRequest request = new QueryRequest
+                {
+                    TableName = _context.TableName,
+                    KeyConditionExpression = "#tipo = :tipo",
+                    ExpressionAttributeNames = new Dictionary<string, string> {
+                        { "#id", "id" },
+                        { "#tipo", "tipo" },
+                        { "#nome", "nome" },
+                        { "#usrId", "assinante-id" },
+                        { "#dtAt", "dt-atualizacao" },
+                        { "#url", "url" },
+                        { "#comentario", "comentario" },
+                        { "#dtPrev", "dt-prevista" },
+                        { "#status", "status" },
+                        { "#revisorId", "revisor-id" }
+                    },
+                    FilterExpression = "#status = :status AND #revisorId = :revisorId",
+                    ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                    {
+                        { ":tipo", new AttributeValue { S = "revisao" } },
+                        { ":status", new AttributeValue { S = "EmRevisao"} },
+                        { ":revisorId", new AttributeValue { N = usuario.Id.ToString() } }
+                    },
+                        
+                    ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
+                };              
+
+                try
+                {
+                    response = await client.QueryAsync(request);
+                }
+                catch (Exception e)
+                {
+                    resp.ErrorMessages.Add(e.Message);
+                    _logger.LogError(e.Message);
+                }
+            }
+            
+            List<Revisao> revisoes = ExtractFileFrom(response.Items);
+            resp.Return = revisoes;
+            return resp;
+        }        
 
         public async Task<Response<Revisao>> AtualizarRevisorAsync(Revisao revisao)
         {
@@ -203,14 +232,16 @@ namespace destino_redacao_1000_api
                         ExpressionAttributeNames = new Dictionary<string, string>
                         {
                             { "#usrId", "assinante-id" },
+                            { "#status", "status" },
                             { "#revId", "revisor-id" }
                         },
                         ExpressionAttributeValues =  new Dictionary<string, AttributeValue>
                         {
                             {":usrId", new AttributeValue { N = revisao.AssinanteId.ToString() }},
+                            {":status", new AttributeValue { S = StatusRevisao.EmRevisao.ToString() }},
                             {":revId", new AttributeValue { N = revisao.RevisorId.ToString() }}
                         },
-                        UpdateExpression = "SET #usrId = :usrId, #revId = :revId"
+                        UpdateExpression = "SET #usrId = :usrId, #status = :status, #revId = :revId"
                     };
 
                     var updResp = await client.UpdateItemAsync(request);
@@ -226,28 +257,6 @@ namespace destino_redacao_1000_api
                 }
             }
         }        
-
-        private async Task<QueryResponse> ObterRevisaoResponseAsync<T>(Usuario usuario, Response<T> resp)
-        {            
-            QueryResponse response = null;
-
-            using (var client = this._context.GetClientInstance())
-            {
-                QueryRequest request = ObterRevisaoQueryRequest(usuario);
-
-                try
-                {
-                    response = await client.QueryAsync(request);
-                }
-                catch (Exception e)
-                {
-                    resp.ErrorMessages.Add(e.Message);
-                    _logger.LogError(e.Message);
-                }
-            }
-
-            return response;
-        }
 
         private QueryRequest ObterRevisaoQueryRequest(Usuario usuario)
         {
@@ -311,7 +320,13 @@ namespace destino_redacao_1000_api
                         int id = 0;
                         int.TryParse(value.N, out id);
                         revisao.AssinanteId = id;
-                    }                     
+                    }    
+                    else if (attributeName == "revisor-id")
+                    {
+                        int id = 0;
+                        int.TryParse(value.N, out id);
+                        revisao.RevisorId = id;
+                    }                                       
                     else if (attributeName == "status")
                     {
                         Object st = null;
@@ -321,13 +336,21 @@ namespace destino_redacao_1000_api
                     else if (attributeName == "dt-prevista")
                     {
                         DateTime dtPrev;
-                        DateTime.TryParse(value.S, out dtPrev);
+                        DateTime.TryParseExact(value.S, 
+                                                "dd/MM/yyyy hh:mm:ss",
+                                                CultureInfo.InvariantCulture, 
+                                                DateTimeStyles.None,
+                                                out dtPrev);
                         revisao.DataPrevista = dtPrev;
                     }                                                                                
                     else if (attributeName == "dt-atualizacao")
                     {
                         DateTime dtAtual;
-                        DateTime.TryParse(value.S, out dtAtual);
+                        DateTime.TryParseExact(value.S, 
+                                            "dd/MM/yyyy hh:mm:ss",
+                                            CultureInfo.InvariantCulture, 
+                                            DateTimeStyles.None,
+                                            out dtAtual);
                         revisao.Arquivo.DataAtualizacao = dtAtual;
                     }                    
                 }

@@ -33,15 +33,15 @@ namespace destino_redacao_1000_api
             _logger = logger;
         }
 
-        [HttpGet("{userLogin}")]
-        public async Task<ActionResult> Get(string userLogin)
+        [HttpGet("RevisoesPendentes")]
+        public async Task<ActionResult> GetRevisoesPendentes()
         {
             var usuario = ObterUsuario();
-            var response = await _revisaoRepository.ObterListaAsync(usuario);
+            var response = await _revisaoRepository.ObterRevisoesPendentesAsync(usuario);
 
             if (response.HasError)
             {
-                _logger.LogError("Lista", response.ErrorMessages);
+                _logger.LogError("RevisoesPendentes", response.ErrorMessages);
                 return BadRequest(response.ErrorMessages);                
             }
 
@@ -60,7 +60,7 @@ namespace destino_redacao_1000_api
 
             if (response.HasError)
             {
-                _logger.LogError("Lista", response.ErrorMessages);
+                _logger.LogError("NovasRevisoes", response.ErrorMessages);
                 return BadRequest(response.ErrorMessages);                
             }
 
@@ -113,11 +113,10 @@ namespace destino_redacao_1000_api
 
                             if (ext.IndexOf(".docx") > -1 || ext.IndexOf(".doc") > -1) 
                             {
-                                var fileId = $"{Guid.NewGuid()}{ext}";
                                 await formFile.CopyToAsync(mmStream); 
                                 mmStream.Seek(0, SeekOrigin.Begin);
                                 var usuario = ObterUsuario();
-                                urlLocation = await _uploadFile.UploadFileAsync(usuario, mmStream, $"{fileId}");
+                                urlLocation = await _uploadFile.UploadFileAsync(usuario, mmStream, formFile.FileName);
 
                                 if (!String.IsNullOrEmpty(urlLocation))
                                 {
