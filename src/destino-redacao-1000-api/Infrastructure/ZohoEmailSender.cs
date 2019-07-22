@@ -37,7 +37,7 @@ namespace destino_redacao_1000_api
             msg.Subject = subject;
             msg.Body = message;
 
-            AttachImage(msg);
+            //AttachImage(msg);
 
             // Create and configure a new SmtpClient
             SmtpClient client = new SmtpClient(HOST, PORT);

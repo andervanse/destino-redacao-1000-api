@@ -39,11 +39,11 @@ namespace destino_redacao_1000_api
                     exprAttrValues.Add(":dtAt", new AttributeValue { S = user.DataAtualizacao.Value.ToString("dd/MM/yyyy hh:mm:ss") });
                     updExp.Append(" #dtAt = :dtAt,");
                     exprAttrNames.Add("#dtAt", "dt-atualizacao");
-                    
+
                     exprAttrValues.Add(":tpUsuario", new AttributeValue { S = user.TipoUsuario.ToString() });
                     updExp.Append(" #tpUsuario = :tpUsuario,");
-                    exprAttrNames.Add("#tpUsuario", "tp-usuario");                    
-                   
+                    exprAttrNames.Add("#tpUsuario", "tp-usuario");
+
                     if (!String.IsNullOrEmpty(user.Senha))
                     {
                         var salt = SecurityCrypt.GenerateSalt();
@@ -83,21 +83,21 @@ namespace destino_redacao_1000_api
                         exprAttrValues.Add(":celular", new AttributeValue { S = user.Celular });
                         updExp.Append(" #celular = :celular,");
                         exprAttrNames.Add("#celular", "celular");
-                    }                          
+                    }
 
-                    if (String.IsNullOrEmpty(user.CodigoEmailConfirmacao))
+                    if (String.IsNullOrEmpty(user.CodigoConfirmacaoEmail))
                     {
                         var hashEmail = SecurityCrypt.GenerateHash(user.Email);
                         exprAttrValues.Add(":codEmail", new AttributeValue { S = hashEmail });
                         updExp.Append(" #codEmail = :codEmail,");
                         exprAttrNames.Add("#codEmail", "cod-email");
-                    }  
+                    }
 
                     if (!user.EmailConfirmado.HasValue)
                     {
                         user.EmailConfirmado = false;
                     }
-                    
+
                     exprAttrValues.Add(":emailConf", new AttributeValue { BOOL = user.EmailConfirmado.Value });
                     updExp.Append(" #emailConf = :emailConf,");
                     exprAttrNames.Add("#emailConf", "email-confirmado");
@@ -130,6 +130,53 @@ namespace destino_redacao_1000_api
                 }
             }
         }
+
+        public async Task<Response<Usuario>> ResetarSenhaAsync(Usuario usuario)
+        {
+            var resp = new Response<Usuario>();
+            usuario.DataAtualizacao = DateTime.Now;
+            var hashCodigoReset = SecurityCrypt.GenerateHash(usuario.Email+usuario.DataAtualizacao.Value.ToString("dd/MM/yyyy hh:mm:ss"));
+            usuario.CodigoResetSenha = hashCodigoReset;
+
+            using (var client = this._context.GetClientInstance())
+            {
+                try
+                {
+                    var request = new UpdateItemRequest
+                    {
+                        TableName = _context.TableName,
+                        Key = new Dictionary<string, AttributeValue>
+                            {
+                                { "tipo", new AttributeValue { S = "usuario" } }
+                            },
+                        ExpressionAttributeNames = new Dictionary<string, string>(){
+                            { "#email", "email" },
+                            { "#dtAt", "dt-atualizacao" },
+                            { "#codReset", "cod-reset" }
+                        },
+                        ExpressionAttributeValues = new Dictionary<string, AttributeValue>(){
+                            {":dtAt", new AttributeValue { S = usuario.DataAtualizacao.Value.ToString("dd/MM/yyyy hh:mm:ss") } },
+                            {":email", new AttributeValue { S = usuario.Email } },
+                            {":codReset", new AttributeValue { S = hashCodigoReset } }
+                        },
+                        ConditionExpression = "#email = :email",
+                        UpdateExpression = "SET #dtAt = :dtAt, #codReset = :codReset"
+                    };
+
+                    var updResp = await client.UpdateItemAsync(request);
+                    resp.Return = usuario;
+
+                    return resp;
+                }
+                catch (Exception e)
+                {
+                    resp.Return = usuario;
+                    resp.ErrorMessages.Add(e.Message);
+                    _log.LogError(e.Message);
+                    return resp;
+                }
+            }
+        }        
 
         public async Task<Response<Usuario>> UsuarioValidoAsync(Usuario user)
         {
@@ -191,6 +238,63 @@ namespace destino_redacao_1000_api
             return resp;
         }
 
+        public async Task<Response<Usuario>> ConfirmarEmailAsync(Usuario usuario)
+        {
+            var resp = new Response<Usuario>();
+
+            if (usuario == null)
+            {
+                resp.ErrorMessages.Add("Parâmetro nulo.");
+                return resp;
+            }
+
+            var result = await this.ObterUsuarioAsync(usuario);
+            usuario.Id = result.Return.Id;
+            usuario.DataAtualizacao = DateTime.Now;
+
+            using (var client = this._context.GetClientInstance())
+            {
+                try
+                {
+                    var request = new UpdateItemRequest
+                    {
+                        TableName = _context.TableName,
+                        Key = new Dictionary<string, AttributeValue>
+                            {
+                                { "tipo", new AttributeValue { S = "usuario" } },
+                                { "id", new AttributeValue { N = usuario.Id.ToString() } }
+                            },
+                        ExpressionAttributeNames = new Dictionary<string, string>(){
+                            { "#email", "email" },
+                            { "#dtAt", "dt-atualizacao" },
+                            { "#confirmado", "email-confirmado" },
+                            { "#codEmail", "cod-email" }
+                        },
+                        ExpressionAttributeValues = new Dictionary<string, AttributeValue>(){
+                            {":dtAt", new AttributeValue { S = usuario.DataAtualizacao.Value.ToString("dd/MM/yyyy hh:mm:ss") } },
+                            {":email", new AttributeValue { S = usuario.Email } },
+                            {":codEmail", new AttributeValue { S = usuario.CodigoConfirmacaoEmail } },
+                            {":confirmado", new AttributeValue { BOOL = true } }
+                        },                        
+                        ConditionExpression = "#email = :email AND #codEmail = :codEmail",
+                        UpdateExpression = "SET #dtAt = :dtAt, #confirmado = :confirmado"
+                    };
+
+                    var updResp = await client.UpdateItemAsync(request);
+                    resp.Return = usuario;
+
+                    return resp;
+                }
+                catch (Exception e)
+                {
+                    resp.Return = usuario;
+                    resp.ErrorMessages.Add(e.Message);
+                    _log.LogError(e.Message);
+                    return resp;
+                }
+            }
+        }
+
         private async Task<QueryResponse> ObterUsuarioResponseAsync<T>(Usuario usuario, Response<T> resp)
         {
             var attrName = String.Empty;
@@ -216,7 +320,17 @@ namespace destino_redacao_1000_api
             {
                 attrName = "email";
                 attrValue.S = usuario.Email;
-            }                                  
+            }
+            else if (!String.IsNullOrEmpty(usuario.CodigoConfirmacaoEmail))
+            {
+                attrName = "cod-email";
+                attrValue.S = usuario.CodigoConfirmacaoEmail;
+            }
+            else if (!String.IsNullOrEmpty(usuario.CodigoResetSenha))
+            {
+                attrName = "cod-reset";
+                attrValue.S = usuario.CodigoResetSenha;
+            }
 
             attributes.Add($"#{attrName}", $":{attrName}");
             QueryResponse response = null;
@@ -244,9 +358,12 @@ namespace destino_redacao_1000_api
             string filterExpr = null;
             string keyExpr = "#tipo = :t";
 
-            if (attrName == "id") {
+            if (attrName == "id")
+            {
                 keyExpr = "#tipo = :t AND #id = :id";
-            } else {
+            }
+            else
+            {
                 filterExpr = $"#{attrName} = :{attrName}";
             }
 
@@ -269,6 +386,7 @@ namespace destino_redacao_1000_api
                         { "#email", "email" },
                         { "#celular", "celular" },
                         { "#codEmail", "cod-email" },
+                        { "#codReset", "cod-reset" },
                         { "#tipoUsr", "tp-usuario" },
                         { "#emailConfirmado", "email-confirmado" }
                 },
@@ -277,7 +395,7 @@ namespace destino_redacao_1000_api
                     { ":t", new AttributeValue { S = "usuario" } },
                     { $":{attrName}", attrValue }
                 },
-                ProjectionExpression = "#id, #tipo, #login, #nome, #dtAt, #hashedPassword, #salt, #email, #celular, #codEmail, #tipoUsr, #emailConfirmado"
+                ProjectionExpression = "#id, #tipo, #login, #nome, #dtAt, #hashedPassword, #salt, #email, #celular, #codEmail, #codReset, #tipoUsr, #emailConfirmado"
             };
         }
 
@@ -310,13 +428,13 @@ namespace destino_redacao_1000_api
                     else if (attributeName == "url-foto")
                     {
                         usuario.UrlFoto = value.S;
-                    }                    
+                    }
                     else if (attributeName == "dt-atualizacao")
                     {
                         DateTime dtAtual;
                         DateTime.TryParse(value.S, out dtAtual);
                         usuario.DataAtualizacao = dtAtual;
-                    }                                    
+                    }
                     else if (attributeName == "email")
                     {
                         usuario.Email = value.S;
@@ -324,7 +442,7 @@ namespace destino_redacao_1000_api
                     else if (attributeName == "celular")
                     {
                         usuario.Celular = value.S;
-                    }                    
+                    }
                     else if (attributeName == "hashedPassword")
                     {
                         usuario.HashedPassword = value.S;
@@ -335,19 +453,19 @@ namespace destino_redacao_1000_api
                     }
                     else if (attributeName == "cod-email")
                     {
-                        usuario.CodigoEmailConfirmacao = value.S;
-                    }   
+                        usuario.CodigoConfirmacaoEmail = value.S;
+                    }
                     else if (attributeName == "email-confirmado")
                     {
                         usuario.EmailConfirmado = value.BOOL;
-                    }                                      
+                    }
                     else if (attributeName == "tp-usuario")
                     {
                         Object tpUser = null;
                         Enum.TryParse(typeof(TipoUsuario), value.S, true, out tpUser);
-                        
-                        if (tpUser != null)         
-                          usuario.TipoUsuario = (TipoUsuario)tpUser;
+
+                        if (tpUser != null)
+                            usuario.TipoUsuario = (TipoUsuario)tpUser;
                     }
                 }
                 list.Add(usuario);

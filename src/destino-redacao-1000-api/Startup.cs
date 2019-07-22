@@ -19,13 +19,14 @@ namespace destino_redacao_1000_api
     public class Startup
     {
         public const string AppS3BucketKey = "Website:S3Bucket";
+        public static IConfiguration Configuration { get; private set; }
+        private readonly ILogger<Startup> _logger;
 
-        public Startup(IConfiguration configuration)
+        public Startup(IConfiguration configuration, ILogger<Startup> logger)
         {
             Configuration = configuration;
+            _logger = logger;
         }
-
-        public static IConfiguration Configuration { get; private set; }
 
         // This method gets called by the runtime. Use this method to add services to the container
         public void ConfigureServices(IServiceCollection services)
@@ -78,8 +79,12 @@ namespace destino_redacao_1000_api
                 app.UseHsts();
             }
 
+            app.ConfigureExceptionHandler(_logger);
+            app.UseCors(builder =>
+                builder.WithOrigins(Configuration["Website:CorsOrigin"])
+                       .AllowAnyMethod()
+                       .AllowAnyHeader());            
             app.UseAuthentication();
-            app.UseCors();
             app.UseHttpsRedirection();
             app.UseMvc();
         }

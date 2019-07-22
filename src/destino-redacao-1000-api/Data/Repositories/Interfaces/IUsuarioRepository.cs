@@ -9,5 +9,7 @@ namespace destino_redacao_1000_api
         Task<Response<Usuario>> UsuarioValidoAsync(Usuario user);        
         Task<Response<List<Usuario>>> ObterUsuariosAsync(Usuario usuario);
         Task<Response<Usuario>> ObterUsuarioAsync(Usuario usuario);
+        Task<Response<Usuario>> ConfirmarEmailAsync(Usuario usuario);
+        Task<Response<Usuario>> ResetarSenhaAsync(Usuario usuario);
     }
 }

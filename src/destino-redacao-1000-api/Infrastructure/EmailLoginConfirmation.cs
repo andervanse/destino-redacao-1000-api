@@ -20,7 +20,7 @@ namespace destino_redacao_1000_api
             StringBuilder body = new StringBuilder();
             body.AppendLine("<html><body>");
             body.AppendLine("<div align=\"center\">");
-            body.AppendLine($"<img src=\"cid:logoImg\">");
+            //body.AppendLine($"<img src=\"cid:logoImg\">");
 
             if (hasPasswordChanged) 
             {

@@ -18,6 +18,8 @@ namespace destino_redacao_1000_api
 
         [Compare("Senha", ErrorMessage="Senhas diferentes")]
         public string ConfirmaSenha { get; set; }
+
+        public string CodigoResetSenha { get; set; }        
     }
 
     public class CredenciaisUsuarioViewModel

@@ -96,21 +96,22 @@ namespace destino_redacao_1000_api
         }
 
         [AllowAnonymous]
-        [HttpGet("{email}/{codConfirmacao}")]
-        public async Task<IActionResult> Get(string email, string codConfirmacao)
+        [HttpPost("email/{email}")]
+        public async Task<IActionResult> ConfirmarEmailPost([FromBody] ConfirmaEmailViewModel confirmaEmail)
         {
             _logger.LogDebug("confirmar-email");
+            if (confirmaEmail == null) return BadRequest();
 
-            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(codConfirmacao)) return BadRequest();
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var usuario = new Usuario 
             {
-                Login = email,
-                Email = email, 
-                CodigoEmailConfirmacao = codConfirmacao
+                Login = confirmaEmail.Email,
+                Email = confirmaEmail.Email, 
+                CodigoConfirmacaoEmail = confirmaEmail.Codigo
             };
 
-            var response = await _userRepo.ObterUsuarioAsync(usuario);
+            var response = await _userRepo.ConfirmarEmailAsync(usuario);
 
             if (response.HasError) return BadRequest(response.ErrorMessages);
 
