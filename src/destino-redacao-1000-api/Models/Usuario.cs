@@ -17,7 +17,7 @@ namespace destino_redacao_1000_api
         public string Celular { get; set; }   
         public string UrlFoto {get; set; }     
         public bool? EmailConfirmado { get; set; }
-        public string CodigoConfirmacaoEmail { get; set; }     
+        public string CodigoEmail { get; set; }     
         public string CodigoResetSenha { get; set; }          
         public TipoUsuario TipoUsuario { get; set; }
     }

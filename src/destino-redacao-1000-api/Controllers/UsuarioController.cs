@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace destino_redacao_1000_api
 {
@@ -15,14 +16,18 @@ namespace destino_redacao_1000_api
         private readonly IUsuarioRepository _userRepo;
         private readonly IEmailLoginConfirmation _emailLoginConfirmation;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<UsuarioController> _logger;
 
-        public UsuarioController(IUsuarioRepository userRepo,
-                                 IEmailLoginConfirmation emailLoginConfirmation,
-                                 IConfiguration configuration)
+        public UsuarioController(            
+            IUsuarioRepository userRepo,
+            IEmailLoginConfirmation emailLoginConfirmation,
+            IConfiguration configuration,
+            ILogger<UsuarioController> logger)
         {
             _userRepo = userRepo;
             _emailLoginConfirmation = emailLoginConfirmation;
             _configuration = configuration;
+            _logger = logger;
         }
 
         [HttpGet("{id}", Name = "GetUser")]
@@ -123,15 +128,15 @@ namespace destino_redacao_1000_api
 
         [AllowAnonymous]
         [HttpPatch("Senha")]
-        public async Task<IActionResult> ResetarSenhaPatch([FromBody] string email)
+        public async Task<IActionResult> ResetarSenhaPatch([FromBody] RedefinicaoSenhaViewModel redefinicaoSenha)
         {
-            if (email == null) return BadRequest();
+            if (redefinicaoSenha == null) return BadRequest();
 
             var user = new Usuario
             {
-                Login = email.ToLower(),
-                Email = email.ToLower(),
-                TipoUsuario = TipoUsuario.Assinante
+                Login = redefinicaoSenha.Email.ToLower(),
+                Email = redefinicaoSenha.Email.ToLower(),
+                CodigoEmail = String.Empty
             };
 
             var response = await _userRepo.ResetarSenhaAsync(user);
@@ -159,23 +164,10 @@ namespace destino_redacao_1000_api
                 Login = loginUsuario.Login,
                 Email = loginUsuario.Login,
                 Senha = loginUsuario.Senha,
-                TipoUsuario = TipoUsuario.Assinante
+                CodigoEmail = loginUsuario.CodigoResetSenha
             };
 
-            var response = await _userRepo.ObterUsuarioAsync(usuario);
-
-            if (response.HasError)
-                return BadRequest(response.ErrorMessages);
-
-            if (response.Return == null)
-            {
-                ModelState.AddModelError("Usuario", "Usuário não encontrado");
-                return BadRequest(ModelState);
-            }
-
-            usuario.Id = response.Return.Id;
-            usuario.Email = response.Return.Email;
-            response = await _userRepo.ResetarSenhaAsync(usuario);
+            var response = await _userRepo.ResetarSenhaAsync(usuario);
 
             if (response.HasError)
                 return BadRequest(response.ErrorMessages);
@@ -183,26 +175,32 @@ namespace destino_redacao_1000_api
                 return Ok(new { Nome = response.Return.Nome, Login = response.Return.Login });
         }
 
-        private async Task<CreatedAtRouteResult> EnviarEmailResetarSenhaAsync(Usuario usuario, bool hasPasswordChanged)
+        private async Task<IActionResult> EnviarEmailResetarSenhaAsync(Usuario usuario, bool hasPasswordChanged)
         {
             var emailResetPasswordUrl = _configuration["Website:EmailResetPasswordUrl"];
             var confirmationUrl = $"{emailResetPasswordUrl}/{usuario.Email}/{usuario.CodigoResetSenha}";
             var threwExceptionSendingEmail = await _emailLoginConfirmation.SendAsync(usuario.Email, confirmationUrl, hasPasswordChanged);
 
-            return CreatedAtRoute(routeName: "GetUser",
-                                routeValues: new { id = usuario.Id },
-                                      value: new { name = usuario.Nome, email = usuario.Email });
+            if (threwExceptionSendingEmail)
+               return StatusCode(500, new { message = "Falha ao enviar email"});
+            else   
+               return CreatedAtRoute(routeName: "GetUser",
+                                   routeValues: new { id = usuario.Id },
+                                         value: new { name = usuario.Nome, email = usuario.Email });
         }
 
-        private async Task<CreatedAtRouteResult> EnviarEmailConfirmacaoAsync(Usuario usuario, bool hasPasswordChanged)
+        private async Task<IActionResult> EnviarEmailConfirmacaoAsync(Usuario usuario, bool hasPasswordChanged)
         {
             var emailConfirmationUrl = _configuration["Website:EmailConfirmationUrl"];
-            var confirmationUrl = $"{emailConfirmationUrl}/{usuario.Email}/{usuario.CodigoConfirmacaoEmail}";
+            var confirmationUrl = $"{emailConfirmationUrl}/{usuario.Email}/{usuario.CodigoEmail}";
             var threwExceptionSendingEmail = await _emailLoginConfirmation.SendAsync(usuario.Email, confirmationUrl, hasPasswordChanged);
 
-            return CreatedAtRoute(routeName: "GetUser",
-                                routeValues: new { id = usuario.Id },
-                                      value: new { name = usuario.Nome, email = usuario.Email });
+            if (threwExceptionSendingEmail)
+               return StatusCode(500, new { message = "Falha ao enviar email"});
+            else   
+               return CreatedAtRoute(routeName: "GetUser",
+                                   routeValues: new { id = usuario.Id },
+                                         value: new { name = usuario.Nome, email = usuario.Email });
         }
     }
 }

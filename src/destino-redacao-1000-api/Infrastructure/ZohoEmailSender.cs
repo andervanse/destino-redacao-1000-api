@@ -12,13 +12,12 @@ namespace destino_redacao_1000_api
     public class ZohoEmailSender : IEmailSender
     {
         private readonly IConfiguration _configuration;
+        private readonly ILogger _logger;
 
-        public ILogger _log { get; }
-
-        public ZohoEmailSender(IConfiguration configuration, ILoggerFactory logger)
+        public ZohoEmailSender(IConfiguration configuration, ILogger<ZohoEmailSender> logger)
         {
             _configuration = configuration;
-            _log = logger.CreateLogger("ZohoEmailSender");
+            _logger = logger;
         }
 
         public Task<bool> SendEmailAsync(string email, string subject, string message)
@@ -54,7 +53,7 @@ namespace destino_redacao_1000_api
             catch (Exception ex)
             {
                 threwException = true;
-                _log.LogError(ex.Message);
+                _logger.LogError(ex.Message);
             }
 
             return Task.FromResult(threwException);
@@ -80,7 +79,7 @@ namespace destino_redacao_1000_api
             }
             catch (System.Exception)
             {
-                _log.LogError("Error while attaching image to e-mail.");
+                _logger.LogError("Error while attaching image to e-mail.");
             }
         }
     }

@@ -108,7 +108,7 @@ namespace destino_redacao_1000_api
             {
                 Login = confirmaEmail.Email,
                 Email = confirmaEmail.Email, 
-                CodigoConfirmacaoEmail = confirmaEmail.Codigo
+                CodigoEmail = confirmaEmail.Codigo
             };
 
             var response = await _userRepo.ConfirmarEmailAsync(usuario);

@@ -85,7 +85,7 @@ namespace destino_redacao_1000_api
                         exprAttrNames.Add("#celular", "celular");
                     }
 
-                    if (String.IsNullOrEmpty(user.CodigoConfirmacaoEmail))
+                    if (String.IsNullOrEmpty(user.CodigoEmail))
                     {
                         var hashEmail = SecurityCrypt.GenerateHash(user.Email);
                         exprAttrValues.Add(":codEmail", new AttributeValue { S = hashEmail });
@@ -134,10 +134,24 @@ namespace destino_redacao_1000_api
         public async Task<Response<Usuario>> ResetarSenhaAsync(Usuario usuario)
         {
             var resp = new Response<Usuario>();
-            usuario.DataAtualizacao = DateTime.Now;
-            var hashCodigoReset = SecurityCrypt.GenerateHash(usuario.Email+usuario.DataAtualizacao.Value.ToString("dd/MM/yyyy hh:mm:ss"));
-            usuario.CodigoResetSenha = hashCodigoReset;
 
+            if (usuario == null) {
+                resp.ErrorMessages.Add("Usuário nulo");
+                return resp;
+            }
+
+            var result = await this.ObterUsuarioAsync(usuario);
+            usuario.Id = result.Return.Id;
+            usuario.DataAtualizacao = DateTime.Now;
+
+            if (String.IsNullOrEmpty(usuario.CodigoResetSenha)) {
+               var hashCodigoReset = SecurityCrypt.GenerateHash(usuario.Email + usuario.DataAtualizacao.Value.ToString("dd/MM/yyyy hh:mm:ss"));
+               usuario.CodigoResetSenha = hashCodigoReset;
+            }
+
+            var salt = SecurityCrypt.GenerateSalt();
+            var hash = SecurityCrypt.GenerateHash(usuario.Senha + salt);
+     
             using (var client = this._context.GetClientInstance())
             {
                 try
@@ -147,25 +161,29 @@ namespace destino_redacao_1000_api
                         TableName = _context.TableName,
                         Key = new Dictionary<string, AttributeValue>
                             {
-                                { "tipo", new AttributeValue { S = "usuario" } }
+                                { "tipo", new AttributeValue { S = "usuario" } },
+                                { "id", new AttributeValue { N = usuario.Id.ToString() } }
                             },
                         ExpressionAttributeNames = new Dictionary<string, string>(){
                             { "#email", "email" },
                             { "#dtAt", "dt-atualizacao" },
-                            { "#codReset", "cod-reset" }
+                            { "#codEmail", "cod-email" },
+                            { "#salt", "salt" },
+                            { "#hash", "hashedPassword" }
                         },
                         ExpressionAttributeValues = new Dictionary<string, AttributeValue>(){
                             {":dtAt", new AttributeValue { S = usuario.DataAtualizacao.Value.ToString("dd/MM/yyyy hh:mm:ss") } },
                             {":email", new AttributeValue { S = usuario.Email } },
-                            {":codReset", new AttributeValue { S = hashCodigoReset } }
+                            {":codEmail", new AttributeValue { S = usuario.CodigoResetSenha } },
+                            {":salt", new AttributeValue { S = salt } },
+                            {":hash", new AttributeValue { S = hash } }
                         },
-                        ConditionExpression = "#email = :email",
-                        UpdateExpression = "SET #dtAt = :dtAt, #codReset = :codReset"
+                        ConditionExpression = "#email = :email AND #codEmail = :codEmail",
+                        UpdateExpression = "SET #dtAt = :dtAt, #salt = :salt, #hash = :hash"
                     };
 
                     var updResp = await client.UpdateItemAsync(request);
                     resp.Return = usuario;
-
                     return resp;
                 }
                 catch (Exception e)
@@ -176,7 +194,7 @@ namespace destino_redacao_1000_api
                     return resp;
                 }
             }
-        }        
+        }
 
         public async Task<Response<Usuario>> UsuarioValidoAsync(Usuario user)
         {
@@ -273,9 +291,9 @@ namespace destino_redacao_1000_api
                         ExpressionAttributeValues = new Dictionary<string, AttributeValue>(){
                             {":dtAt", new AttributeValue { S = usuario.DataAtualizacao.Value.ToString("dd/MM/yyyy hh:mm:ss") } },
                             {":email", new AttributeValue { S = usuario.Email } },
-                            {":codEmail", new AttributeValue { S = usuario.CodigoConfirmacaoEmail } },
+                            {":codEmail", new AttributeValue { S = usuario.CodigoEmail } },
                             {":confirmado", new AttributeValue { BOOL = true } }
-                        },                        
+                        },
                         ConditionExpression = "#email = :email AND #codEmail = :codEmail",
                         UpdateExpression = "SET #dtAt = :dtAt, #confirmado = :confirmado"
                     };
@@ -321,10 +339,10 @@ namespace destino_redacao_1000_api
                 attrName = "email";
                 attrValue.S = usuario.Email;
             }
-            else if (!String.IsNullOrEmpty(usuario.CodigoConfirmacaoEmail))
+            else if (!String.IsNullOrEmpty(usuario.CodigoEmail))
             {
                 attrName = "cod-email";
-                attrValue.S = usuario.CodigoConfirmacaoEmail;
+                attrValue.S = usuario.CodigoEmail;
             }
             else if (!String.IsNullOrEmpty(usuario.CodigoResetSenha))
             {
@@ -453,7 +471,7 @@ namespace destino_redacao_1000_api
                     }
                     else if (attributeName == "cod-email")
                     {
-                        usuario.CodigoConfirmacaoEmail = value.S;
+                        usuario.CodigoEmail = value.S;
                     }
                     else if (attributeName == "email-confirmado")
                     {
