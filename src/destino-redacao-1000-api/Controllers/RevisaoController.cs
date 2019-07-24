@@ -67,6 +67,25 @@ namespace destino_redacao_1000_api
             return Ok(response.Return);
         }  
 
+        [HttpGet]
+        public async Task<ActionResult> GetRevisoesAssinante()
+        {
+            var assinante = ObterUsuario();
+
+            if (assinante.TipoUsuario != TipoUsuario.Assinante)
+               return BadRequest(new { message = "Usuário inválido." });
+
+            var response = await _revisaoRepository.ObterRevisoesAssinanteAsync(assinante);
+
+            if (response.HasError)
+            {
+                _logger.LogError("Revisões Assinante", response.ErrorMessages);
+                return BadRequest(response.ErrorMessages);                
+            }
+
+            return Ok(response.Return);
+        }          
+
         [HttpPatch("{id}")]
         public async Task<ActionResult> Patch(int id, [FromBody] AtualizaNovaRevisaoViewModel atualizaRevisao)
         {

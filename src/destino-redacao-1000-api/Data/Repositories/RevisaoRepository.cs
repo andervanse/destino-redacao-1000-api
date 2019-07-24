@@ -213,6 +213,55 @@ namespace destino_redacao_1000_api
             return resp;
         }        
 
+        public async Task<Response<List<Revisao>>> ObterRevisoesAssinanteAsync(Usuario usuario)
+        {
+            var resp = new Response<List<Revisao>>();
+            QueryResponse response = null;
+
+            using (var client = this._context.GetClientInstance())
+            {
+                QueryRequest request = new QueryRequest
+                {
+                    TableName = _context.TableName,
+                    KeyConditionExpression = "#tipo = :tipo",
+                    ExpressionAttributeNames = new Dictionary<string, string> {
+                        { "#id", "id" },
+                        { "#tipo", "tipo" },
+                        { "#nome", "nome" },
+                        { "#assinanteId", "assinante-id" },
+                        { "#dtAt", "dt-atualizacao" },
+                        { "#url", "url" },
+                        { "#comentario", "comentario" },
+                        { "#dtPrev", "dt-prevista" },
+                        { "#status", "status" },
+                        { "#revisorId", "revisor-id" }
+                    },
+                    FilterExpression = "#assinanteId = :assinanteId",
+                    ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                    {
+                        { ":tipo", new AttributeValue { S = "revisao" } },
+                        { ":assinanteId", new AttributeValue { N = usuario.Id.ToString() } }
+                    },
+                        
+                    ProjectionExpression = "#id, #tipo, #nome, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
+                };              
+
+                try
+                {
+                    response = await client.QueryAsync(request);
+                }
+                catch (Exception e)
+                {
+                    resp.ErrorMessages.Add(e.Message);
+                    _logger.LogError(e.Message);
+                }
+            }
+            
+            List<Revisao> revisoes = ExtractFileFrom(response.Items);
+            resp.Return = revisoes;
+            return resp;
+        }
+
         public async Task<Response<Revisao>> AtualizarRevisorAsync(Revisao revisao)
         {
             var resp = new Response<Revisao>();

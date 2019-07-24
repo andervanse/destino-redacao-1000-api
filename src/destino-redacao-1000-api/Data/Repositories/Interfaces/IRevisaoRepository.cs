@@ -9,6 +9,7 @@ namespace destino_redacao_1000_api
         Task<Response<Revisao>> SalvarAsync(Revisao revisao);
         Task<Response<Revisao>> AtualizarRevisorAsync(Revisao revisao);
         Task<Response<List<Revisao>>> ObterNovasRevisoesAsync(Usuario usuario);
+        Task<Response<List<Revisao>>> ObterRevisoesAssinanteAsync(Usuario usuario);
         Task<Response<List<Revisao>>> ObterRevisoesPendentesAsync(Usuario usuario);
     }
 }
