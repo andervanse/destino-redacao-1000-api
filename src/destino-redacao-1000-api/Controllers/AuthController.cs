@@ -85,6 +85,7 @@ namespace destino_redacao_1000_api
                     {
                         Nome = response.Return.Nome,
                         Email = response.Return.Email,
+                        TipoUsuario = response.Return.TipoUsuario,                      
                         DataAtualizacao = DateTime.Now
                     }
                 });

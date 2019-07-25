@@ -12,6 +12,7 @@ namespace destino_redacao_1000_api
 
         public int Id { get; set; }
         public int AssinanteId { get; set; }
+        public string AssinanteEmail { get; set; }
         public int RevisorId { get; set; }
         public Arquivo Arquivo { get; set; }
         public string Comentario { get; set; }

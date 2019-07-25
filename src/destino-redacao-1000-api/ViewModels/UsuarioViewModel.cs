@@ -10,6 +10,7 @@ namespace destino_redacao_1000_api
         public string Email { get; set; } 
         public string Senha { get; set; }
         public string Celular { get; set; }
+        public TipoUsuario TipoUsuario { get; set; }
         public DateTime DataAtualizacao { get; set; }
     }    
 }

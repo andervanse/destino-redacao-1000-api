@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace destino_redacao_1000_api
 {
-    public class RevisaoRepository :IRevisaoRepository
+    public class RevisaoRepository : IRevisaoRepository
     {
         private readonly DynamoDbContext _context;
         private readonly ILogger _logger;
@@ -23,6 +23,12 @@ namespace destino_redacao_1000_api
         {
             var resp = new Response<Revisao>();
 
+            if (revisao.Arquivo == null)
+            {
+                resp.ErrorMessages.Add("Arquivo obrigatório.");
+                return resp;
+            }
+
             using (var client = this._context.GetClientInstance())
             {
                 try
@@ -34,56 +40,55 @@ namespace destino_redacao_1000_api
                     if (revisao.Id < 1)
                     {
                         revisao.Id = (Int32)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                        //exprAttrValues.Add(":revisaoId", new AttributeValue { S = revisao.Id.ToString() });
-                        //updExp.Append(" #revisaoId = :revisaoId,");
-                        //exprAttrNames.Add("#revisaoId", "id");
                     }
 
                     revisao.DataPrevista = DateTime.Now.AddDays(4);
                     exprAttrValues.Add(":dtPrev", new AttributeValue { S = revisao.DataPrevista.ToString("dd/MM/yyyy hh:mm:ss") });
                     updExp.Append(" #dtPrev = :dtPrev,");
-                    exprAttrNames.Add("#dtPrev", "dt-prevista");     
+                    exprAttrNames.Add("#dtPrev", "dt-prevista");
 
-                    exprAttrValues.Add(":usrId", new AttributeValue { N = revisao.AssinanteId.ToString() });
-                    updExp.Append(" #usrId = :usrId,");
-                    exprAttrNames.Add("#usrId", "assinante-id"); 
+                    exprAttrValues.Add(":assinanteId", new AttributeValue { N = revisao.AssinanteId.ToString() });
+                    updExp.Append(" #assinanteId = :assinanteId,");
+                    exprAttrNames.Add("#assinanteId", "assinante-id");
+
+                    exprAttrValues.Add(":assinanteEmail", new AttributeValue { S = revisao.AssinanteEmail });
+                    updExp.Append(" #assinanteEmail = :assinanteEmail,");
+                    exprAttrNames.Add("#assinanteEmail", "assinante-email");
 
                     exprAttrValues.Add(":revId", new AttributeValue { N = revisao.RevisorId.ToString() });
                     updExp.Append(" #revId = :revId,");
-                    exprAttrNames.Add("#revId", "revisor-id");                     
+                    exprAttrNames.Add("#revId", "revisor-id");
 
                     exprAttrValues.Add(":status", new AttributeValue { S = revisao.StatusRevisao.ToString() });
                     updExp.Append(" #status = :status,");
                     exprAttrNames.Add("#status", "status");
 
-                    if (revisao.Arquivo != null)
+                    revisao.Arquivo.DataAtualizacao = DateTime.Now;
+                    exprAttrValues.Add(":dtAt", new AttributeValue { S = revisao.Arquivo.DataAtualizacao.ToString("dd/MM/yyyy hh:mm:ss") });
+                    updExp.Append(" #dtAt = :dtAt,");
+                    exprAttrNames.Add("#dtAt", "dt-atualizacao");
+
+                    if (!String.IsNullOrEmpty(revisao.Arquivo.Nome))
                     {
-                        revisao.Arquivo.DataAtualizacao = DateTime.Now;
-                        exprAttrValues.Add(":dtAt", new AttributeValue { S = revisao.Arquivo.DataAtualizacao.ToString("dd/MM/yyyy hh:mm:ss") });
-                        updExp.Append(" #dtAt = :dtAt,");
-                        exprAttrNames.Add("#dtAt", "dt-atualizacao"); 
-
-                        if (!String.IsNullOrEmpty(revisao.Arquivo.Nome))
-                        {
-                            exprAttrValues.Add(":nome", new AttributeValue { S = revisao.Arquivo.Nome });
-                            updExp.Append(" #nome = :nome,");
-                            exprAttrNames.Add("#nome", "nome");                        
-                        }
-
-                        if (!String.IsNullOrEmpty(revisao.Arquivo.Url))
-                        {
-                            exprAttrValues.Add(":url", new AttributeValue { S = revisao.Arquivo.Url });
-                            updExp.Append(" #url = :url,");
-                            exprAttrNames.Add("#url", "url");                        
-                        }
+                        exprAttrValues.Add(":nome", new AttributeValue { S = revisao.Arquivo.Nome });
+                        updExp.Append(" #nome = :nome,");
+                        exprAttrNames.Add("#nome", "nome");
                     }
+
+                    if (!String.IsNullOrEmpty(revisao.Arquivo.Url))
+                    {
+                        exprAttrValues.Add(":url", new AttributeValue { S = revisao.Arquivo.Url });
+                        updExp.Append(" #url = :url,");
+                        exprAttrNames.Add("#url", "url");
+                    }
+
 
                     if (!String.IsNullOrEmpty(revisao.Comentario))
                     {
                         exprAttrValues.Add(":comentario", new AttributeValue { S = revisao.Comentario });
                         updExp.Append(" #comentario = :comentario,");
-                        exprAttrNames.Add("#comentario", "comentario");                        
-                    }                    
+                        exprAttrNames.Add("#comentario", "comentario");
+                    }
 
                     var request = new UpdateItemRequest
                     {
@@ -143,9 +148,9 @@ namespace destino_redacao_1000_api
                         { ":tipo", new AttributeValue { S = "revisao" } },
                         { ":status", new AttributeValue { S = "NovaRevisao"} }
                     },
-                        
+
                     ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
-                };                
+                };
 
                 try
                 {
@@ -157,7 +162,7 @@ namespace destino_redacao_1000_api
                     _logger.LogError(e.Message);
                 }
             }
-            
+
             List<Revisao> revisoes = ExtractFileFrom(response.Items);
             resp.Return = revisoes;
             return resp;
@@ -193,9 +198,9 @@ namespace destino_redacao_1000_api
                         { ":status", new AttributeValue { S = "EmRevisao"} },
                         { ":revisorId", new AttributeValue { N = usuario.Id.ToString() } }
                     },
-                        
+
                     ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
-                };              
+                };
 
                 try
                 {
@@ -207,11 +212,61 @@ namespace destino_redacao_1000_api
                     _logger.LogError(e.Message);
                 }
             }
-            
+
             List<Revisao> revisoes = ExtractFileFrom(response.Items);
             resp.Return = revisoes;
             return resp;
-        }        
+        }
+
+        public async Task<Response<List<Revisao>>> ObterRevisoesNovasAsync(Usuario usuario)
+        {
+            var resp = new Response<List<Revisao>>();
+            QueryResponse response = null;
+
+            using (var client = this._context.GetClientInstance())
+            {
+                QueryRequest request = new QueryRequest
+                {
+                    TableName = _context.TableName,
+                    KeyConditionExpression = "#tipo = :tipo",
+                    ExpressionAttributeNames = new Dictionary<string, string> {
+                        { "#id", "id" },
+                        { "#tipo", "tipo" },
+                        { "#nome", "nome" },
+                        { "#usrId", "assinante-id" },
+                        { "#dtAt", "dt-atualizacao" },
+                        { "#url", "url" },
+                        { "#comentario", "comentario" },
+                        { "#dtPrev", "dt-prevista" },
+                        { "#status", "status" },
+                        { "#revisorId", "revisor-id" }
+                    },
+                    FilterExpression = "#status = :status AND #revisorId = :revisorId",
+                    ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                    {
+                        { ":tipo", new AttributeValue { S = "revisao" } },
+                        { ":status", new AttributeValue { S = "NovaRevisao"} },
+                        { ":revisorId", new AttributeValue { N = "0" } }
+                    },
+
+                    ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
+                };
+
+                try
+                {
+                    response = await client.QueryAsync(request);
+                }
+                catch (Exception e)
+                {
+                    resp.ErrorMessages.Add(e.Message);
+                    _logger.LogError(e.Message);
+                }
+            }
+
+            List<Revisao> revisoes = ExtractFileFrom(response.Items);
+            resp.Return = revisoes;
+            return resp;
+        }
 
         public async Task<Response<List<Revisao>>> ObterRevisoesAssinanteAsync(Usuario usuario)
         {
@@ -242,9 +297,9 @@ namespace destino_redacao_1000_api
                         { ":tipo", new AttributeValue { S = "revisao" } },
                         { ":assinanteId", new AttributeValue { N = usuario.Id.ToString() } }
                     },
-                        
+
                     ProjectionExpression = "#id, #tipo, #nome, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
-                };              
+                };
 
                 try
                 {
@@ -256,12 +311,12 @@ namespace destino_redacao_1000_api
                     _logger.LogError(e.Message);
                 }
             }
-            
+
             List<Revisao> revisoes = ExtractFileFrom(response.Items);
             resp.Return = revisoes;
             return resp;
         }
-
+        
         public async Task<Response<Revisao>> AtualizarRevisorAsync(Revisao revisao)
         {
             var resp = new Response<Revisao>();
@@ -284,7 +339,7 @@ namespace destino_redacao_1000_api
                             { "#status", "status" },
                             { "#revId", "revisor-id" }
                         },
-                        ExpressionAttributeValues =  new Dictionary<string, AttributeValue>
+                        ExpressionAttributeValues = new Dictionary<string, AttributeValue>
                         {
                             {":usrId", new AttributeValue { N = revisao.AssinanteId.ToString() }},
                             {":status", new AttributeValue { S = StatusRevisao.EmRevisao.ToString() }},
@@ -305,8 +360,8 @@ namespace destino_redacao_1000_api
                     return resp;
                 }
             }
-        }        
-
+        }
+        
         private QueryRequest ObterRevisaoQueryRequest(Usuario usuario)
         {
             string keyExpr = "#tipo = :t";
@@ -333,7 +388,7 @@ namespace destino_redacao_1000_api
                 ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status"
             };
         }
-
+        
         private List<Revisao> ExtractFileFrom(List<Dictionary<string, AttributeValue>> dictionary)
         {
             List<Revisao> list = new List<Revisao>();
@@ -341,7 +396,7 @@ namespace destino_redacao_1000_api
 
             foreach (var item in dictionary)
             {
-                revisao = new Revisao();                
+                revisao = new Revisao();
 
                 foreach (KeyValuePair<string, AttributeValue> kvp in item)
                 {
@@ -355,7 +410,7 @@ namespace destino_redacao_1000_api
                     else if (attributeName == "nome")
                     {
                         revisao.Arquivo.Nome = value.S;
-                    }                  
+                    }
                     else if (attributeName == "url")
                     {
                         revisao.Arquivo.Url = value.S;
@@ -363,45 +418,49 @@ namespace destino_redacao_1000_api
                     else if (attributeName == "comentario")
                     {
                         revisao.Comentario = value.S;
-                    }  
+                    }
                     else if (attributeName == "assinante-id")
                     {
                         int id = 0;
                         int.TryParse(value.N, out id);
                         revisao.AssinanteId = id;
-                    }    
+                    }
+                    else if (attributeName == "assinante-email")
+                    {
+                        revisao.AssinanteEmail = value.S;
+                    }                    
                     else if (attributeName == "revisor-id")
                     {
                         int id = 0;
                         int.TryParse(value.N, out id);
                         revisao.RevisorId = id;
-                    }                                       
+                    }
                     else if (attributeName == "status")
                     {
                         Object st = null;
                         Enum.TryParse(typeof(StatusRevisao), value.S, true, out st);
-                        revisao.StatusRevisao = (StatusRevisao)st;                        
+                        revisao.StatusRevisao = (StatusRevisao)st;
                     }
                     else if (attributeName == "dt-prevista")
                     {
                         DateTime dtPrev;
-                        DateTime.TryParseExact(value.S, 
+                        DateTime.TryParseExact(value.S,
                                                 "dd/MM/yyyy hh:mm:ss",
-                                                CultureInfo.InvariantCulture, 
+                                                CultureInfo.InvariantCulture,
                                                 DateTimeStyles.None,
                                                 out dtPrev);
                         revisao.DataPrevista = dtPrev;
-                    }                                                                                
+                    }
                     else if (attributeName == "dt-atualizacao")
                     {
                         DateTime dtAtual;
-                        DateTime.TryParseExact(value.S, 
+                        DateTime.TryParseExact(value.S,
                                             "dd/MM/yyyy hh:mm:ss",
-                                            CultureInfo.InvariantCulture, 
+                                            CultureInfo.InvariantCulture,
                                             DateTimeStyles.None,
                                             out dtAtual);
                         revisao.Arquivo.DataAtualizacao = dtAtual;
-                    }                    
+                    }
                 }
                 list.Add(revisao);
             }

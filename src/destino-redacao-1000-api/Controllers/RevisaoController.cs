@@ -33,7 +33,7 @@ namespace destino_redacao_1000_api
             _logger = logger;
         }
 
-        [HttpGet("RevisoesPendentes")]
+        [HttpGet("pendentes")]
         public async Task<ActionResult> GetRevisoesPendentes()
         {
             var usuario = ObterUsuario();
@@ -41,12 +41,27 @@ namespace destino_redacao_1000_api
 
             if (response.HasError)
             {
-                _logger.LogError("RevisoesPendentes", response.ErrorMessages);
+                _logger.LogError("revisao/pendentes", response.ErrorMessages);
                 return BadRequest(response.ErrorMessages);                
             }
 
             return Ok(response.Return);
         }
+
+        [HttpGet("novas")]
+        public async Task<ActionResult> GetRevisoesNovas()
+        {
+            var usuario = ObterUsuario();
+            var response = await _revisaoRepository.ObterRevisoesNovasAsync(usuario);
+
+            if (response.HasError)
+            {
+                _logger.LogError("revisao/novas", response.ErrorMessages);
+                return BadRequest(response.ErrorMessages);                
+            }
+
+            return Ok(response.Return);
+        }        
 
         [HttpGet("NovasRevisoes")]
         public async Task<ActionResult> GetNovasRevisoes()
@@ -116,6 +131,8 @@ namespace destino_redacao_1000_api
         {
             long size = form.Files.Sum(f => f.Length);
             string comentario = form["comentario"];
+            int revisaoId = 0;
+            int.TryParse(form["revisaoId"], out revisaoId);
 
             if (size > 0)
             {
@@ -141,7 +158,9 @@ namespace destino_redacao_1000_api
                                 {
                                     var revisao = new Revisao
                                     {
+                                        Id = revisaoId,
                                         AssinanteId = usuario.Id,
+                                        AssinanteEmail = usuario.Email,
                                         Arquivo = new Arquivo
                                         {
                                             Nome = formFile.FileName,
