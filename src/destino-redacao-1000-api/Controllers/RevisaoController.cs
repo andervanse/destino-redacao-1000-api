@@ -49,21 +49,6 @@ namespace destino_redacao_1000_api
         }
 
         [HttpGet("novas")]
-        public async Task<ActionResult> GetRevisoesNovas()
-        {
-            var usuario = ObterUsuario();
-            var response = await _revisaoRepository.ObterRevisoesNovasAsync(usuario);
-
-            if (response.HasError)
-            {
-                _logger.LogError("revisao/novas", response.ErrorMessages);
-                return BadRequest(response.ErrorMessages);                
-            }
-
-            return Ok(response.Return);
-        }        
-
-        [HttpGet("NovasRevisoes")]
         public async Task<ActionResult> GetNovasRevisoes()
         {
             var usuario = ObterUsuario();
@@ -101,8 +86,8 @@ namespace destino_redacao_1000_api
             return Ok(response.Return);
         }          
 
-        [HttpPatch("{id}")]
-        public async Task<ActionResult> Patch(int id, [FromBody] AtualizaNovaRevisaoViewModel atualizaRevisao)
+        [HttpPatch]
+        public async Task<ActionResult> Patch([FromBody] AtualizaNovaRevisaoViewModel atualizaRevisao)
         {
             var revisor = ObterUsuario();
 
@@ -206,6 +191,7 @@ namespace destino_redacao_1000_api
                 return BadRequest("Arquivo inválido.");
             }
         }
+
 
         [HttpDelete("{keyName}")]
         public async Task<IActionResult> Delete(string keyName)

@@ -11,6 +11,5 @@ namespace destino_redacao_1000_api
         Task<Response<List<Revisao>>> ObterNovasRevisoesAsync(Usuario usuario);
         Task<Response<List<Revisao>>> ObterRevisoesAssinanteAsync(Usuario usuario);
         Task<Response<List<Revisao>>> ObterRevisoesPendentesAsync(Usuario usuario);
-        Task<Response<List<Revisao>>> ObterRevisoesNovasAsync(Usuario usuario);
     }
 }

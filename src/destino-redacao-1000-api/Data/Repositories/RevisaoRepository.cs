@@ -142,11 +142,12 @@ namespace destino_redacao_1000_api
                         { "#status", "status" },
                         { "#revisorId", "revisor-id" }
                     },
-                    FilterExpression = "#status = :status",
+                    FilterExpression = "#status = :status AND #revisorId = :revisorId",
                     ExpressionAttributeValues = new Dictionary<string, AttributeValue>
                     {
                         { ":tipo", new AttributeValue { S = "revisao" } },
-                        { ":status", new AttributeValue { S = "NovaRevisao"} }
+                        { ":status", new AttributeValue { S = "NovaRevisao"} },
+                        { ":revisorId", new AttributeValue { N = "0" } }
                     },
 
                     ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
@@ -197,56 +198,6 @@ namespace destino_redacao_1000_api
                         { ":tipo", new AttributeValue { S = "revisao" } },
                         { ":status", new AttributeValue { S = "EmRevisao"} },
                         { ":revisorId", new AttributeValue { N = usuario.Id.ToString() } }
-                    },
-
-                    ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
-                };
-
-                try
-                {
-                    response = await client.QueryAsync(request);
-                }
-                catch (Exception e)
-                {
-                    resp.ErrorMessages.Add(e.Message);
-                    _logger.LogError(e.Message);
-                }
-            }
-
-            List<Revisao> revisoes = ExtractFileFrom(response.Items);
-            resp.Return = revisoes;
-            return resp;
-        }
-
-        public async Task<Response<List<Revisao>>> ObterRevisoesNovasAsync(Usuario usuario)
-        {
-            var resp = new Response<List<Revisao>>();
-            QueryResponse response = null;
-
-            using (var client = this._context.GetClientInstance())
-            {
-                QueryRequest request = new QueryRequest
-                {
-                    TableName = _context.TableName,
-                    KeyConditionExpression = "#tipo = :tipo",
-                    ExpressionAttributeNames = new Dictionary<string, string> {
-                        { "#id", "id" },
-                        { "#tipo", "tipo" },
-                        { "#nome", "nome" },
-                        { "#usrId", "assinante-id" },
-                        { "#dtAt", "dt-atualizacao" },
-                        { "#url", "url" },
-                        { "#comentario", "comentario" },
-                        { "#dtPrev", "dt-prevista" },
-                        { "#status", "status" },
-                        { "#revisorId", "revisor-id" }
-                    },
-                    FilterExpression = "#status = :status AND #revisorId = :revisorId",
-                    ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-                    {
-                        { ":tipo", new AttributeValue { S = "revisao" } },
-                        { ":status", new AttributeValue { S = "NovaRevisao"} },
-                        { ":revisorId", new AttributeValue { N = "0" } }
                     },
 
                     ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
