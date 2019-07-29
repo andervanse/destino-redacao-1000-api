@@ -112,12 +112,46 @@ namespace destino_redacao_1000_api
         }               
 
         [HttpPost]
-        public async Task<IActionResult> Post([FromForm] IFormCollection form)
+        public Task<IActionResult> Post([FromForm] IFormCollection form)
+        {
+            return UploadFile(form, TipoArquivo.Revisao);
+        }
+
+        [HttpPost("correcao")]
+        public Task<IActionResult> CorrecaoPost([FromForm] IFormCollection form)
+        {
+            return UploadFile(form, TipoArquivo.Correcao);
+        }
+
+        [HttpDelete("{keyName}")]
+        public async Task<IActionResult> Delete(string keyName)
+        {
+            try
+            {
+                var usuario = ObterUsuario();
+                await _uploadFile.DeleteFileAsync(usuario, keyName);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.Message);
+                return BadRequest(e.Message);
+            }
+
+            return Ok();
+        }
+
+
+        private async Task<IActionResult> UploadFile(IFormCollection form, TipoArquivo tpArquivo)
         {
             long size = form.Files.Sum(f => f.Length);
             string comentario = form["comentario"];
+            string tipoArquivo = form["tipoArquivo"];
+            int revisaoIdRef = 0;
+            int.TryParse(form["revisaoIdRef"], out revisaoIdRef);
             int revisaoId = 0;
             int.TryParse(form["revisaoId"], out revisaoId);
+            int assinanteId = 0;
+            int.TryParse(form["assinanteId"], out assinanteId);
 
             if (size > 0)
             {
@@ -144,16 +178,28 @@ namespace destino_redacao_1000_api
                                     var revisao = new Revisao
                                     {
                                         Id = revisaoId,
-                                        AssinanteId = usuario.Id,
+                                        AssinanteId = assinanteId,
                                         AssinanteEmail = usuario.Email,
+                                        RevisaoIdRef = revisaoIdRef,
                                         Arquivo = new Arquivo
                                         {
                                             Nome = formFile.FileName,
                                             Url = urlLocation,
+                                            TipoArquivo = tpArquivo,
                                             DataAtualizacao = DateTime.Now
                                         },
                                         Comentario = comentario
                                     };
+
+                                    if (usuario.TipoUsuario == TipoUsuario.Revisor)
+                                    {
+                                      revisao.RevisorId = usuario.Id;
+                                      revisao.StatusRevisao = StatusRevisao.Revisado;
+                                    }
+                                    else
+                                    {
+                                      revisao.AssinanteId = usuario.Id;
+                                    }
 
                                     var response = await _revisaoRepository.SalvarAsync(revisao);
 
@@ -190,24 +236,6 @@ namespace destino_redacao_1000_api
             {
                 return BadRequest("Arquivo inválido.");
             }
-        }
-
-
-        [HttpDelete("{keyName}")]
-        public async Task<IActionResult> Delete(string keyName)
-        {
-            try
-            {
-                var usuario = ObterUsuario();
-                await _uploadFile.DeleteFileAsync(usuario, keyName);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e.Message);
-                return BadRequest(e.Message);
-            }
-
-            return Ok();
         }
     }
 }

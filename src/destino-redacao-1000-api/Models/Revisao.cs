@@ -16,7 +16,8 @@ namespace destino_redacao_1000_api
         public int RevisorId { get; set; }
         public Arquivo Arquivo { get; set; }
         public string Comentario { get; set; }
-        public StatusRevisao StatusRevisao { get; set; }
+        public StatusRevisao StatusRevisao { get; set; }        
+        public int RevisaoIdRef { get; set; }        
         public DateTime DataPrevista { get; set; }
     }
 
@@ -24,8 +25,11 @@ namespace destino_redacao_1000_api
     {
         public string Nome { get; set; }
         public string Url { get; set; }   
+        public TipoArquivo TipoArquivo { get; set; }
         public DateTime DataAtualizacao { get; set; }     
     }
 
     public enum StatusRevisao { NovaRevisao, EmRevisao, Revisado }
+
+    public enum TipoArquivo { Revisao, Correcao }
 }

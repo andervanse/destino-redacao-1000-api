@@ -63,7 +63,8 @@ namespace destino_redacao_1000_api
                 {
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                     new Claim(JwtRegisteredClaimNames.UniqueName, response.Return.Login),
-                    new Claim(JwtRegisteredClaimNames.NameId, response.Return.Id.ToString())
+                    new Claim(JwtRegisteredClaimNames.NameId, response.Return.Id.ToString()),
+                    new Claim(JwtRegisteredClaimNames.Email, response.Return.Email)
                 };
 
                 claims.Add(new Claim(ClaimTypes.Role, response.Return.TipoUsuario.ToString()));

@@ -63,6 +63,10 @@ namespace destino_redacao_1000_api
                     updExp.Append(" #status = :status,");
                     exprAttrNames.Add("#status", "status");
 
+                    exprAttrValues.Add(":revIdRef", new AttributeValue { N = revisao.RevisaoIdRef.ToString() });
+                    updExp.Append(" #revIdRef = :revIdRef,");
+                    exprAttrNames.Add("#revIdRef", "revisao-id-ref");
+
                     revisao.Arquivo.DataAtualizacao = DateTime.Now;
                     exprAttrValues.Add(":dtAt", new AttributeValue { S = revisao.Arquivo.DataAtualizacao.ToString("dd/MM/yyyy hh:mm:ss") });
                     updExp.Append(" #dtAt = :dtAt,");
@@ -82,6 +86,9 @@ namespace destino_redacao_1000_api
                         exprAttrNames.Add("#url", "url");
                     }
 
+                    exprAttrValues.Add(":tpArq", new AttributeValue { S = revisao.Arquivo.TipoArquivo.ToString() });
+                    updExp.Append(" #tpArq = :tpArq,");
+                    exprAttrNames.Add("#tpArq", "tp-arquivo");
 
                     if (!String.IsNullOrEmpty(revisao.Comentario))
                     {
@@ -240,6 +247,8 @@ namespace destino_redacao_1000_api
                         { "#comentario", "comentario" },
                         { "#dtPrev", "dt-prevista" },
                         { "#status", "status" },
+                        { "#tpArq", "tp-arquivo" },
+                        { "#revIdRef", "revisao-id-ref" }, 
                         { "#revisorId", "revisor-id" }
                     },
                     FilterExpression = "#assinanteId = :assinanteId",
@@ -249,7 +258,7 @@ namespace destino_redacao_1000_api
                         { ":assinanteId", new AttributeValue { N = usuario.Id.ToString() } }
                     },
 
-                    ProjectionExpression = "#id, #tipo, #nome, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
+                    ProjectionExpression = "#id, #tipo, #nome, #dtAt, #url, #comentario, #dtPrev, #status, #tpArq, #revIdRef, #revisorId"
                 };
 
                 try
