@@ -97,6 +97,7 @@ namespace destino_redacao_1000_api
             var revisao = new Revisao {
                 Id = atualizaRevisao.RevisaoId,
                 AssinanteId = atualizaRevisao.AssinanteId,
+                StatusRevisao = StatusRevisao.EmRevisao,
                 RevisorId = revisor.Id                
             };
 
@@ -114,22 +115,33 @@ namespace destino_redacao_1000_api
         [HttpPost]
         public Task<IActionResult> Post([FromForm] IFormCollection form)
         {
-            return UploadFile(form, TipoArquivo.Revisao);
-        }
-
-        [HttpPost("correcao")]
-        public Task<IActionResult> CorrecaoPost([FromForm] IFormCollection form)
-        {
-            return UploadFile(form, TipoArquivo.Correcao);
+            return UploadFile(form);
         }
 
         [HttpDelete("{keyName}")]
-        public async Task<IActionResult> Delete(string keyName)
+        public async Task<IActionResult> Delete(string keyName, [FromBody] DeletaRevisaoViewModel revisaoVm)
         {
             try
             {
                 var usuario = ObterUsuario();
+
+                var revisao = new Revisao
+                {
+                    Id = revisaoVm.Id,
+                    AssinanteId = usuario.Id,
+                    Arquivo = new Arquivo 
+                    {
+                        Nome = revisaoVm.Arquivo.Nome,
+                        Url = revisaoVm.Arquivo.Url
+                    }
+                };
+
                 await _uploadFile.DeleteFileAsync(usuario, keyName);
+                var resp = await _revisaoRepository.DeletarAsync(revisao);
+
+                if (resp.HasError)
+                  return BadRequest(resp.ErrorMessages);
+
             }
             catch (Exception e)
             {
@@ -140,8 +152,7 @@ namespace destino_redacao_1000_api
             return Ok();
         }
 
-
-        private async Task<IActionResult> UploadFile(IFormCollection form, TipoArquivo tpArquivo)
+        private async Task<IActionResult> UploadFile(IFormCollection form)
         {
             long size = form.Files.Sum(f => f.Length);
             string comentario = form["comentario"];
@@ -179,13 +190,11 @@ namespace destino_redacao_1000_api
                                     {
                                         Id = revisaoId,
                                         AssinanteId = assinanteId,
-                                        AssinanteEmail = usuario.Email,
-                                        RevisaoIdRef = revisaoIdRef,
+                                        AssinanteEmail = usuario.Email,                                        
                                         Arquivo = new Arquivo
                                         {
                                             Nome = formFile.FileName,
                                             Url = urlLocation,
-                                            TipoArquivo = tpArquivo,
                                             DataAtualizacao = DateTime.Now
                                         },
                                         Comentario = comentario
@@ -193,12 +202,15 @@ namespace destino_redacao_1000_api
 
                                     if (usuario.TipoUsuario == TipoUsuario.Revisor)
                                     {
-                                      revisao.RevisorId = usuario.Id;
-                                      revisao.StatusRevisao = StatusRevisao.Revisado;
+                                        revisao.RevisorId = usuario.Id;
+                                        revisao.RevisaoIdRef = revisaoIdRef;
+                                        revisao.Arquivo.TipoArquivo = TipoArquivo.Correcao;
                                     }
                                     else
                                     {
-                                      revisao.AssinanteId = usuario.Id;
+                                        revisao.Arquivo.TipoArquivo = TipoArquivo.Revisao;
+                                        revisao.StatusRevisao = StatusRevisao.NovaRevisao;
+                                        revisao.AssinanteId = usuario.Id;
                                     }
 
                                     var response = await _revisaoRepository.SalvarAsync(revisao);

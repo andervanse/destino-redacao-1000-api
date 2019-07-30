@@ -59,13 +59,19 @@ namespace destino_redacao_1000_api
                     updExp.Append(" #revId = :revId,");
                     exprAttrNames.Add("#revId", "revisor-id");
 
-                    exprAttrValues.Add(":status", new AttributeValue { S = revisao.StatusRevisao.ToString() });
-                    updExp.Append(" #status = :status,");
-                    exprAttrNames.Add("#status", "status");
+                    if (revisao.StatusRevisao.HasValue) 
+                    {
+                        exprAttrValues.Add(":status", new AttributeValue { S = revisao.StatusRevisao.Value.ToString() });
+                        updExp.Append(" #status = :status,");
+                        exprAttrNames.Add("#status", "status");
+                    }
 
-                    exprAttrValues.Add(":revIdRef", new AttributeValue { N = revisao.RevisaoIdRef.ToString() });
-                    updExp.Append(" #revIdRef = :revIdRef,");
-                    exprAttrNames.Add("#revIdRef", "revisao-id-ref");
+                    if (revisao.RevisaoIdRef.HasValue) 
+                    {
+                        exprAttrValues.Add(":revIdRef", new AttributeValue { N = revisao.RevisaoIdRef.Value.ToString() });
+                        updExp.Append(" #revIdRef = :revIdRef,");
+                        exprAttrNames.Add("#revIdRef", "revisao-id-ref");
+                    }
 
                     revisao.Arquivo.DataAtualizacao = DateTime.Now;
                     exprAttrValues.Add(":dtAt", new AttributeValue { S = revisao.Arquivo.DataAtualizacao.ToString("dd/MM/yyyy hh:mm:ss") });
@@ -197,17 +203,20 @@ namespace destino_redacao_1000_api
                         { "#comentario", "comentario" },
                         { "#dtPrev", "dt-prevista" },
                         { "#status", "status" },
+                        { "#tpArq", "tp-arquivo" },
+                        { "#revIdRef", "revisao-id-ref" }, 
                         { "#revisorId", "revisor-id" }
                     },
-                    FilterExpression = "#status = :status AND #revisorId = :revisorId",
+                    FilterExpression = "#revisorId = :revisorId AND (#status = :status OR #tpArq = :tpArq)",
                     ExpressionAttributeValues = new Dictionary<string, AttributeValue>
                     {
                         { ":tipo", new AttributeValue { S = "revisao" } },
                         { ":status", new AttributeValue { S = "EmRevisao"} },
+                        { ":tpArq", new AttributeValue { S = "Correcao"} },
                         { ":revisorId", new AttributeValue { N = usuario.Id.ToString() } }
                     },
 
-                    ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
+                    ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status, #tpArq, #revIdRef, #revisorId"
                 };
 
                 try
@@ -225,7 +234,6 @@ namespace destino_redacao_1000_api
             resp.Return = revisoes;
             return resp;
         }
-
         public async Task<Response<List<Revisao>>> ObterRevisoesAssinanteAsync(Usuario usuario)
         {
             var resp = new Response<List<Revisao>>();
@@ -276,7 +284,7 @@ namespace destino_redacao_1000_api
             resp.Return = revisoes;
             return resp;
         }
-        
+
         public async Task<Response<Revisao>> AtualizarRevisorAsync(Revisao revisao)
         {
             var resp = new Response<Revisao>();
@@ -302,7 +310,7 @@ namespace destino_redacao_1000_api
                         ExpressionAttributeValues = new Dictionary<string, AttributeValue>
                         {
                             {":usrId", new AttributeValue { N = revisao.AssinanteId.ToString() }},
-                            {":status", new AttributeValue { S = StatusRevisao.EmRevisao.ToString() }},
+                            {":status", new AttributeValue { S = revisao.StatusRevisao.ToString() }},
                             {":revId", new AttributeValue { N = revisao.RevisorId.ToString() }}
                         },
                         UpdateExpression = "SET #usrId = :usrId, #status = :status, #revId = :revId"
@@ -322,6 +330,45 @@ namespace destino_redacao_1000_api
             }
         }
         
+        public async Task<Response<Revisao>> DeletarAsync(Revisao revisao)
+        {
+            var resp = new Response<Revisao>();
+            DeleteItemResponse response = null;
+
+            using (var client = this._context.GetClientInstance())
+            {
+                DeleteItemRequest request = new DeleteItemRequest
+                {
+                    TableName = _context.TableName,
+                    Key = new Dictionary<string, AttributeValue>
+                    {
+                        { "id", new AttributeValue { N = revisao.Id.ToString() } },
+                        { "tipo", new AttributeValue { S = "revisao" } }
+                    },
+                    ConditionExpression = "#status = :status",
+                    ExpressionAttributeNames = new Dictionary<string, string> {
+                        { "#status", "status" }
+                    },
+                    ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                    {
+                        { ":status", new AttributeValue { S = StatusRevisao.NovaRevisao.ToString() } }
+                    }
+                };
+
+                try
+                {
+                    response = await client.DeleteItemAsync(request);
+                }
+                catch (Exception e)
+                {
+                    resp.ErrorMessages.Add(e.Message);
+                    _logger.LogError(e.Message);
+                }
+
+                return resp;
+            }
+        }
+
         private QueryRequest ObterRevisaoQueryRequest(Usuario usuario)
         {
             string keyExpr = "#tipo = :t";
@@ -401,6 +448,12 @@ namespace destino_redacao_1000_api
                         Enum.TryParse(typeof(StatusRevisao), value.S, true, out st);
                         revisao.StatusRevisao = (StatusRevisao)st;
                     }
+                    else if (attributeName == "tp-arquivo")
+                    {
+                        Object st = null;
+                        Enum.TryParse(typeof(TipoArquivo), value.S, true, out st);
+                        revisao.Arquivo.TipoArquivo = (TipoArquivo)st;
+                    }                    
                     else if (attributeName == "dt-prevista")
                     {
                         DateTime dtPrev;
@@ -426,5 +479,6 @@ namespace destino_redacao_1000_api
             }
             return list;
         }
+
     }
 }

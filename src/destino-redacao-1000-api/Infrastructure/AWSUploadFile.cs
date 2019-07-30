@@ -87,7 +87,7 @@ namespace destino_redacao_1000_api
 
         private string GetFileLocation(Usuario usuario, string keyName)
         {
-            return $"usuarios/{usuario.Id}/{keyName}";
+            return $"arquivos/{usuario.Id}/{keyName}";
         }
     }
 
