@@ -129,6 +129,7 @@ namespace destino_redacao_1000_api
                 {
                     Id = revisaoVm.Id,
                     AssinanteId = usuario.Id,
+                    StatusRevisao = revisaoVm.StatusRevisao,
                     Arquivo = new Arquivo 
                     {
                         Nome = revisaoVm.Arquivo.Nome,
@@ -205,6 +206,7 @@ namespace destino_redacao_1000_api
                                         revisao.RevisorId = usuario.Id;
                                         revisao.RevisaoIdRef = revisaoIdRef;
                                         revisao.Arquivo.TipoArquivo = TipoArquivo.Correcao;
+                                        revisao.StatusRevisao = StatusRevisao.Revisado;
                                     }
                                     else
                                     {

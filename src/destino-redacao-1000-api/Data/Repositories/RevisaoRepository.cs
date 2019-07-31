@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2.Model;
@@ -33,7 +34,7 @@ namespace destino_redacao_1000_api
             {
                 try
                 {
-                    StringBuilder updExp = new StringBuilder("SET ");
+                    StringBuilder updateExpr = new StringBuilder("SET ");
                     var exprAttrValues = new Dictionary<string, AttributeValue>();
                     var exprAttrNames = new Dictionary<string, string>();
 
@@ -44,62 +45,59 @@ namespace destino_redacao_1000_api
 
                     revisao.DataPrevista = DateTime.Now.AddDays(4);
                     exprAttrValues.Add(":dtPrev", new AttributeValue { S = revisao.DataPrevista.ToString("dd/MM/yyyy hh:mm:ss") });
-                    updExp.Append(" #dtPrev = :dtPrev,");
+                    updateExpr.Append(" #dtPrev = :dtPrev,");
                     exprAttrNames.Add("#dtPrev", "dt-prevista");
 
                     exprAttrValues.Add(":assinanteId", new AttributeValue { N = revisao.AssinanteId.ToString() });
-                    updExp.Append(" #assinanteId = :assinanteId,");
+                    updateExpr.Append(" #assinanteId = :assinanteId,");
                     exprAttrNames.Add("#assinanteId", "assinante-id");
 
                     exprAttrValues.Add(":assinanteEmail", new AttributeValue { S = revisao.AssinanteEmail });
-                    updExp.Append(" #assinanteEmail = :assinanteEmail,");
+                    updateExpr.Append(" #assinanteEmail = :assinanteEmail,");
                     exprAttrNames.Add("#assinanteEmail", "assinante-email");
 
                     exprAttrValues.Add(":revId", new AttributeValue { N = revisao.RevisorId.ToString() });
-                    updExp.Append(" #revId = :revId,");
+                    updateExpr.Append(" #revId = :revId,");
                     exprAttrNames.Add("#revId", "revisor-id");
 
-                    if (revisao.StatusRevisao.HasValue) 
-                    {
-                        exprAttrValues.Add(":status", new AttributeValue { S = revisao.StatusRevisao.Value.ToString() });
-                        updExp.Append(" #status = :status,");
-                        exprAttrNames.Add("#status", "status");
-                    }
+                    exprAttrValues.Add(":status", new AttributeValue { S = revisao.StatusRevisao.ToString() });
+                    updateExpr.Append(" #status = :status,");
+                    exprAttrNames.Add("#status", "status");
 
                     if (revisao.RevisaoIdRef.HasValue) 
                     {
                         exprAttrValues.Add(":revIdRef", new AttributeValue { N = revisao.RevisaoIdRef.Value.ToString() });
-                        updExp.Append(" #revIdRef = :revIdRef,");
+                        updateExpr.Append(" #revIdRef = :revIdRef,");
                         exprAttrNames.Add("#revIdRef", "revisao-id-ref");
                     }
 
                     revisao.Arquivo.DataAtualizacao = DateTime.Now;
                     exprAttrValues.Add(":dtAt", new AttributeValue { S = revisao.Arquivo.DataAtualizacao.ToString("dd/MM/yyyy hh:mm:ss") });
-                    updExp.Append(" #dtAt = :dtAt,");
+                    updateExpr.Append(" #dtAt = :dtAt,");
                     exprAttrNames.Add("#dtAt", "dt-atualizacao");
 
                     if (!String.IsNullOrEmpty(revisao.Arquivo.Nome))
                     {
                         exprAttrValues.Add(":nome", new AttributeValue { S = revisao.Arquivo.Nome });
-                        updExp.Append(" #nome = :nome,");
+                        updateExpr.Append(" #nome = :nome,");
                         exprAttrNames.Add("#nome", "nome");
                     }
 
                     if (!String.IsNullOrEmpty(revisao.Arquivo.Url))
                     {
                         exprAttrValues.Add(":url", new AttributeValue { S = revisao.Arquivo.Url });
-                        updExp.Append(" #url = :url,");
+                        updateExpr.Append(" #url = :url,");
                         exprAttrNames.Add("#url", "url");
                     }
 
                     exprAttrValues.Add(":tpArq", new AttributeValue { S = revisao.Arquivo.TipoArquivo.ToString() });
-                    updExp.Append(" #tpArq = :tpArq,");
+                    updateExpr.Append(" #tpArq = :tpArq,");
                     exprAttrNames.Add("#tpArq", "tp-arquivo");
 
                     if (!String.IsNullOrEmpty(revisao.Comentario))
                     {
                         exprAttrValues.Add(":comentario", new AttributeValue { S = revisao.Comentario });
-                        updExp.Append(" #comentario = :comentario,");
+                        updateExpr.Append(" #comentario = :comentario,");
                         exprAttrNames.Add("#comentario", "comentario");
                     }
 
@@ -107,24 +105,59 @@ namespace destino_redacao_1000_api
                     {
                         TableName = _context.TableName,
                         Key = new Dictionary<string, AttributeValue>
-                            {
-                                { "tipo", new AttributeValue { S = $"revisao" } },
-                                { "id", new AttributeValue { N = revisao.Id.ToString() } }
-                            },
-
+                        {
+                            { "tipo", new AttributeValue { S = $"revisao" } },
+                            { "id", new AttributeValue { N = revisao.Id.ToString() } }
+                        },
                         ExpressionAttributeNames = exprAttrNames,
                         ExpressionAttributeValues = exprAttrValues,
-                        UpdateExpression = updExp.ToString().Substring(0, updExp.ToString().Length - 1)
+                        UpdateExpression = updateExpr.ToString().Substring(0, updateExpr.ToString().Length - 1)
                     };
 
                     var updResp = await client.UpdateItemAsync(request);
-                    resp.Return = revisao;
 
+                    if (updResp.HttpStatusCode == HttpStatusCode.OK && revisao.RevisaoIdRef.HasValue)
+                    {
+                        var updateRequest = new UpdateItemRequest
+                        {
+                            TableName = _context.TableName,
+                            Key = new Dictionary<string, AttributeValue>
+                            {
+                                { "tipo", new AttributeValue { S = "revisao" } },
+                                { "id", new AttributeValue { N = revisao.RevisaoIdRef.ToString() } }
+                            },
+                            ExpressionAttributeNames = new Dictionary<string, string> 
+                            {
+                                { "#status", "status" },
+                                { "#dtAt", "dt-atualizacao" }
+                            },
+                            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                            {
+                                { ":status", new AttributeValue { S = "Revisado" } },
+                                { ":dtAt", new AttributeValue { S = DateTime.Now.ToString("dd/MM/yyyy hh:mm:ss") } }
+                            },
+                            UpdateExpression = "SET #status = :status, #dtAt = :dtAt"
+                        };   
+
+                        try
+                        {
+                           var updateReferencia = await client.UpdateItemAsync(updateRequest);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e.Message);
+                            resp.ErrorMessages.Add("Falha ao atualizar a referência da revisão.");
+                            resp.ErrorMessages.Add(e.Message);
+                        }
+                    }
+
+                    resp.Return = revisao;
                     return resp;
                 }
                 catch (Exception e)
                 {
                     resp.Return = revisao;
+                    resp.ErrorMessages.Add("Falha ao salvar a revisão.");
                     resp.ErrorMessages.Add(e.Message);
                     _logger.LogError(e.Message);
                     return resp;
@@ -143,7 +176,8 @@ namespace destino_redacao_1000_api
                 {
                     TableName = _context.TableName,
                     KeyConditionExpression = "#tipo = :tipo",
-                    ExpressionAttributeNames = new Dictionary<string, string> {
+                    ExpressionAttributeNames = new Dictionary<string, string> 
+                    {
                         { "#id", "id" },
                         { "#tipo", "tipo" },
                         { "#nome", "nome" },
@@ -155,20 +189,26 @@ namespace destino_redacao_1000_api
                         { "#status", "status" },
                         { "#revisorId", "revisor-id" }
                     },
-                    FilterExpression = "#status = :status AND #revisorId = :revisorId",
+                    FilterExpression = "#status = :status AND #revisorId = :revisorIdZero",
                     ExpressionAttributeValues = new Dictionary<string, AttributeValue>
                     {
                         { ":tipo", new AttributeValue { S = "revisao" } },
-                        { ":status", new AttributeValue { S = "NovaRevisao"} },
-                        { ":revisorId", new AttributeValue { N = "0" } }
+                        { ":status", new AttributeValue { S = StatusRevisao.NovaRevisao.ToString() } },
+                        { ":revisorIdZero", new AttributeValue { N = "0" } }
                     },
-
                     ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status, #revisorId"
                 };
 
                 try
                 {
                     response = await client.QueryAsync(request);
+
+                    if (response.HttpStatusCode != HttpStatusCode.OK)
+                    {
+                        var msg = "Falha ao obter novas revisões.";
+                        resp.ErrorMessages.Add(msg);
+                        _logger.LogError(msg);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -193,11 +233,13 @@ namespace destino_redacao_1000_api
                 {
                     TableName = _context.TableName,
                     KeyConditionExpression = "#tipo = :tipo",
-                    ExpressionAttributeNames = new Dictionary<string, string> {
+                    ExpressionAttributeNames = new Dictionary<string, string> 
+                    {
                         { "#id", "id" },
                         { "#tipo", "tipo" },
                         { "#nome", "nome" },
-                        { "#usrId", "assinante-id" },
+                        { "#assinanteId", "assinante-id" },
+                        { "#assinanteEmail", "assinante-email" },
                         { "#dtAt", "dt-atualizacao" },
                         { "#url", "url" },
                         { "#comentario", "comentario" },
@@ -207,21 +249,26 @@ namespace destino_redacao_1000_api
                         { "#revIdRef", "revisao-id-ref" }, 
                         { "#revisorId", "revisor-id" }
                     },
-                    FilterExpression = "#revisorId = :revisorId AND (#status = :status OR #tpArq = :tpArq)",
+                    FilterExpression = "#revisorId = :revisorId AND (#status = :status)",
                     ExpressionAttributeValues = new Dictionary<string, AttributeValue>
                     {
                         { ":tipo", new AttributeValue { S = "revisao" } },
-                        { ":status", new AttributeValue { S = "EmRevisao"} },
-                        { ":tpArq", new AttributeValue { S = "Correcao"} },
+                        { ":status", new AttributeValue { S = StatusRevisao.EmRevisao.ToString() } },
                         { ":revisorId", new AttributeValue { N = usuario.Id.ToString() } }
                     },
-
-                    ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status, #tpArq, #revIdRef, #revisorId"
+                    ProjectionExpression = "#id, #tipo, #nome, #assinanteId, #assinanteEmail, #dtAt, #url, #comentario, #dtPrev, #status, #tpArq, #revIdRef, #revisorId"
                 };
 
                 try
                 {
                     response = await client.QueryAsync(request);
+
+                    if (response.HttpStatusCode != HttpStatusCode.OK)
+                    {
+                        var msg = "Falha ao obter revisões pendentes.";
+                        resp.ErrorMessages.Add(msg);
+                        _logger.LogError(msg);
+                    }                    
                 }
                 catch (Exception e)
                 {
@@ -234,6 +281,7 @@ namespace destino_redacao_1000_api
             resp.Return = revisoes;
             return resp;
         }
+
         public async Task<Response<List<Revisao>>> ObterRevisoesAssinanteAsync(Usuario usuario)
         {
             var resp = new Response<List<Revisao>>();
@@ -245,11 +293,13 @@ namespace destino_redacao_1000_api
                 {
                     TableName = _context.TableName,
                     KeyConditionExpression = "#tipo = :tipo",
-                    ExpressionAttributeNames = new Dictionary<string, string> {
+                    ExpressionAttributeNames = new Dictionary<string, string> 
+                    {
                         { "#id", "id" },
                         { "#tipo", "tipo" },
                         { "#nome", "nome" },
                         { "#assinanteId", "assinante-id" },
+                        { "#assinanteEmail", "assinante-email" },
                         { "#dtAt", "dt-atualizacao" },
                         { "#url", "url" },
                         { "#comentario", "comentario" },
@@ -265,13 +315,19 @@ namespace destino_redacao_1000_api
                         { ":tipo", new AttributeValue { S = "revisao" } },
                         { ":assinanteId", new AttributeValue { N = usuario.Id.ToString() } }
                     },
-
-                    ProjectionExpression = "#id, #tipo, #nome, #dtAt, #url, #comentario, #dtPrev, #status, #tpArq, #revIdRef, #revisorId"
+                    ProjectionExpression = "#id, #tipo, #nome, #assinanteEmail, #dtAt, #url, #comentario, #dtPrev, #status, #tpArq, #revIdRef, #revisorId"
                 };
 
                 try
                 {
                     response = await client.QueryAsync(request);
+
+                    if (response.HttpStatusCode != HttpStatusCode.OK)
+                    {
+                        var msg = "Falha ao obter revisões do assinante.";
+                        resp.ErrorMessages.Add(msg);
+                        _logger.LogError(msg);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -333,7 +389,6 @@ namespace destino_redacao_1000_api
         public async Task<Response<Revisao>> DeletarAsync(Revisao revisao)
         {
             var resp = new Response<Revisao>();
-            DeleteItemResponse response = null;
 
             using (var client = this._context.GetClientInstance())
             {
@@ -345,19 +400,28 @@ namespace destino_redacao_1000_api
                         { "id", new AttributeValue { N = revisao.Id.ToString() } },
                         { "tipo", new AttributeValue { S = "revisao" } }
                     },
-                    ConditionExpression = "#status = :status",
-                    ExpressionAttributeNames = new Dictionary<string, string> {
-                        { "#status", "status" }
+                    ConditionExpression = "#status = :status OR #tpArq = :tpArq",
+                    ExpressionAttributeNames = new Dictionary<string, string> 
+                    {
+                        { "#status", "status" },
+                        { "#tpArq", "tp-arquivo" },
                     },
                     ExpressionAttributeValues = new Dictionary<string, AttributeValue>
                     {
-                        { ":status", new AttributeValue { S = StatusRevisao.NovaRevisao.ToString() } }
+                        { ":status", new AttributeValue { S = revisao.StatusRevisao.ToString() } },
+                        { ":tpArq", new AttributeValue { S = TipoArquivo.Correcao.ToString() } }
                     }
                 };
 
                 try
                 {
-                    response = await client.DeleteItemAsync(request);
+                    DeleteItemResponse response = await client.DeleteItemAsync(request);
+
+                    if (response.HttpStatusCode != HttpStatusCode.OK)
+                    {
+                        resp.ErrorMessages.Add("Falha ao deletar revisão.");
+                        _logger.LogError("Falha ao deletar revisão.");
+                    }
                 }
                 catch (Exception e)
                 {
@@ -367,33 +431,6 @@ namespace destino_redacao_1000_api
 
                 return resp;
             }
-        }
-
-        private QueryRequest ObterRevisaoQueryRequest(Usuario usuario)
-        {
-            string keyExpr = "#tipo = :t";
-
-            return new QueryRequest
-            {
-                TableName = _context.TableName,
-                KeyConditionExpression = keyExpr,
-                ExpressionAttributeNames = new Dictionary<string, string> {
-                    { "#id", "id" },
-                    { "#tipo", "tipo" },
-                    { "#nome", "nome" },
-                    { "#usrId", "assinante-id" },
-                    { "#dtAt", "dt-atualizacao" },
-                    { "#url", "url" },
-                    { "#comentario", "comentario" },
-                    { "#dtPrev", "dt-prevista" },
-                    { "#status", "status" }
-                },
-                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-                {
-                    { ":t", new AttributeValue { S = "revisao" } }
-                },
-                ProjectionExpression = "#id, #tipo, #nome, #usrId, #dtAt, #url, #comentario, #dtPrev, #status"
-            };
         }
         
         private List<Revisao> ExtractFileFrom(List<Dictionary<string, AttributeValue>> dictionary)
