@@ -65,7 +65,26 @@ namespace destino_redacao_1000_api
             }
 
             return Ok(response.Return);
-        }  
+        } 
+
+        [HttpGet("finalizadas")]
+        public async Task<ActionResult> GetRevisoesFinalizadas()
+        {
+            var usuario = ObterUsuario();
+
+            if (usuario.TipoUsuario == TipoUsuario.Assinante)
+               return BadRequest(new { message = "Usuário inválido." });
+
+            var response = await _revisaoRepository.ObterRevisoesFinalizadasAsync(usuario);
+
+            if (response.HasError)
+            {
+                _logger.LogError("RevisoesFinalizadas", response.ErrorMessages);
+                return BadRequest(response.ErrorMessages);                
+            }
+
+            return Ok(response.Return);
+        }          
 
         [HttpGet]
         public async Task<ActionResult> GetRevisoesAssinante()
@@ -113,6 +132,7 @@ namespace destino_redacao_1000_api
         }               
 
         [HttpPost]
+        [RequestSizeLimit(1572864)]
         public Task<IActionResult> Post([FromForm] IFormCollection form)
         {
             return UploadFile(form);
@@ -170,6 +190,7 @@ namespace destino_redacao_1000_api
                 var formFile = form.Files[0];
                 var urlLocation = "";
 
+
                 if (formFile.Length > 0 && !String.IsNullOrEmpty(formFile.FileName))
                 {
                     try
@@ -178,7 +199,10 @@ namespace destino_redacao_1000_api
                         {
                             var ext = Path.GetExtension(formFile.FileName);
 
-                            if (ext.IndexOf(".docx") > -1 || ext.IndexOf(".doc") > -1) 
+                            if (ext.IndexOf(".docx") > -1
+                                || ext.IndexOf(".doc") > -1 
+                                || ext.IndexOf(".odt") > -1
+                                || ext.IndexOf(".txt") > -1) 
                             {
                                 await formFile.CopyToAsync(mmStream); 
                                 mmStream.Seek(0, SeekOrigin.Begin);
@@ -231,8 +255,8 @@ namespace destino_redacao_1000_api
                             }
                             else 
                             {
-                                _logger.LogError("Upload", "Extensão do arquivo inválida.");
-                                return BadRequest(new { message = "Extensão do arquivo inválida." });
+                                _logger.LogError("Upload", "Formato do arquivo inválido.");
+                                return BadRequest(new { message = "Formato do arquivo inválido." });
                             }
                         }
                     }
