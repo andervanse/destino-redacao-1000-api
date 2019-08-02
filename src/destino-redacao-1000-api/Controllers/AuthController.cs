@@ -130,7 +130,7 @@ namespace destino_redacao_1000_api
 
         [AllowAnonymous]
         [HttpPatch]
-        public async Task<IActionResult> Patch([FromBody] LoginUsuarioViewModel loginUsuario)
+        public async Task<IActionResult> Patch([FromBody] CadastroUsuarioViewModel loginUsuario)
         {
             if (loginUsuario == null) return BadRequest();
 

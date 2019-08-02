@@ -41,13 +41,13 @@ namespace destino_redacao_1000_api
 
         [AllowAnonymous]
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] LoginUsuarioViewModel loginUsuario)
+        public async Task<IActionResult> Post([FromBody] CadastroUsuarioViewModel cadastroUsuario)
         {
-            if (loginUsuario == null) return BadRequest();
+            if (cadastroUsuario == null) return BadRequest();
 
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            if (String.IsNullOrEmpty(loginUsuario.Nome))
+            if (String.IsNullOrEmpty(cadastroUsuario.Nome))
             {
                 ModelState.AddModelError("Nome", "Campo obrigatório");
                 return BadRequest(ModelState);
@@ -55,10 +55,10 @@ namespace destino_redacao_1000_api
 
             var user = new Usuario
             {
-                Login = loginUsuario.Login.ToLower(),
-                Nome = loginUsuario.Nome,
-                Email = loginUsuario.Login.ToLower(),
-                Senha = loginUsuario.Senha,
+                Login = cadastroUsuario.Login.ToLower(),
+                Nome = cadastroUsuario.Nome,
+                Email = cadastroUsuario.Login.ToLower(),
+                Senha = cadastroUsuario.Senha,
                 TipoUsuario = TipoUsuario.Assinante
             };
 
@@ -84,7 +84,7 @@ namespace destino_redacao_1000_api
         }
 
         [HttpPut]
-        public async Task<IActionResult> Put([FromBody] LoginUsuarioViewModel loginUsuario)
+        public async Task<IActionResult> Put([FromBody] CadastroUsuarioViewModel loginUsuario)
         {
             if (loginUsuario == null) return BadRequest();
 
@@ -118,16 +118,16 @@ namespace destino_redacao_1000_api
 
             usuario.Id = response.Return.Id;
             usuario.Email = response.Return.Email;
-            response = await _userRepo.SalvarAsync(usuario);
+            var salvarResponse = await _userRepo.SalvarAsync(usuario);
 
-            if (response.HasError)
-                return BadRequest(response.ErrorMessages);
+            if (salvarResponse.HasError)
+                return BadRequest(salvarResponse.ErrorMessages);
 
             return await EnviarEmailConfirmacaoAsync(response.Return, hasPasswordChanged: true);
         }
 
         [AllowAnonymous]
-        [HttpPatch("Senha")]
+        [HttpPatch("senha")]
         public async Task<IActionResult> ResetarSenhaPatch([FromBody] RedefinicaoSenhaViewModel redefinicaoSenha)
         {
             if (redefinicaoSenha == null) return BadRequest();
@@ -152,8 +152,8 @@ namespace destino_redacao_1000_api
         }
 
         [AllowAnonymous]
-        [HttpPut("Senha")]
-        public async Task<IActionResult> NovaSenhaPut([FromBody] LoginUsuarioViewModel loginUsuario)
+        [HttpPut("senha")]
+        public async Task<IActionResult> NovaSenhaPut([FromBody] CadastroUsuarioViewModel loginUsuario)
         {
             if (loginUsuario == null) return BadRequest();
 

@@ -88,9 +88,10 @@ namespace destino_redacao_1000_api
                     if (String.IsNullOrEmpty(user.CodigoEmail))
                     {
                         var hashEmail = SecurityCrypt.GenerateHash(user.Email);
+                        user.CodigoEmail = hashEmail;
                         exprAttrValues.Add(":codEmail", new AttributeValue { S = hashEmail });
                         updExp.Append(" #codEmail = :codEmail,");
-                        exprAttrNames.Add("#codEmail", "cod-email");
+                        exprAttrNames.Add("#codEmail", "cod-email");                        
                     }
 
                     if (!user.EmailConfirmado.HasValue)
@@ -142,6 +143,7 @@ namespace destino_redacao_1000_api
 
             var result = await this.ObterUsuarioAsync(usuario);
             usuario.Id = result.Return.Id;
+            usuario.CodigoEmail = result.Return.CodigoEmail;
             usuario.DataAtualizacao = DateTime.Now;
 
             if (String.IsNullOrEmpty(usuario.CodigoResetSenha)) {
@@ -174,7 +176,7 @@ namespace destino_redacao_1000_api
                         ExpressionAttributeValues = new Dictionary<string, AttributeValue>(){
                             {":dtAt", new AttributeValue { S = usuario.DataAtualizacao.Value.ToString("dd/MM/yyyy hh:mm:ss") } },
                             {":email", new AttributeValue { S = usuario.Email } },
-                            {":codEmail", new AttributeValue { S = usuario.CodigoResetSenha } },
+                            {":codEmail", new AttributeValue { S = usuario.CodigoEmail } },
                             {":salt", new AttributeValue { S = salt } },
                             {":hash", new AttributeValue { S = hash } }
                         },
