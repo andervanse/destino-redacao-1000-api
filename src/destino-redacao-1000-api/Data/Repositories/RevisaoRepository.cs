@@ -16,7 +16,9 @@ namespace destino_redacao_1000_api
         private readonly Dictionary<string, string> _expressionAttributeNames;
         private readonly string _projectionExpression;
 
-        public RevisaoRepository(DynamoDbContext context, ILogger<RevisaoRepository> logger)
+        public RevisaoRepository(
+            DynamoDbContext context, 
+            ILogger<RevisaoRepository> logger)
         {
             _context = context;
             _logger = logger;

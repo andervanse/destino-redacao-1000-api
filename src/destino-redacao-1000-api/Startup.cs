@@ -36,8 +36,16 @@ namespace destino_redacao_1000_api
             services.AddScoped<IEmailLoginConfirmation, EmailLoginConfirmation>();
             services.AddScoped<IUsuarioRepository, UsuarioRepository>();
             services.AddScoped<IRevisaoRepository, RevisaoRepository>();
+            services.AddScoped<IPostagemRepository, PostagemRepository>();
             services.AddScoped<IUploadFile, AWSUploadFile>();
             services.AddSingleton<IConfiguration>(x => Configuration);            
+
+            services.AddAuthorization(options => {
+                options.AddPolicy("Revisor", policy => {
+                    policy.RequireAssertion(ctx => 
+                     ctx.User.HasClaim(c => c.Type == Policies.Revisor));
+                });
+            });
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(opt => {
@@ -82,6 +90,7 @@ namespace destino_redacao_1000_api
             app.ConfigureExceptionHandler(_logger);
             app.UseCors(builder =>
                 builder.WithOrigins(Configuration["Website:CorsOrigin"])
+                       .SetIsOriginAllowedToAllowWildcardSubdomains()
                        .AllowAnyMethod()
                        .AllowAnyHeader());            
             app.UseAuthentication();
