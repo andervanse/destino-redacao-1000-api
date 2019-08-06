@@ -41,10 +41,9 @@ namespace destino_redacao_1000_api
             services.AddSingleton<IConfiguration>(x => Configuration);            
 
             services.AddAuthorization(options => {
-                options.AddPolicy("Revisor", policy => {
-                    policy.RequireAssertion(ctx => 
-                     ctx.User.HasClaim(c => c.Type == Policies.Revisor));
-                });
+                options.AddPolicy("Revisor", policy => 
+                    policy.RequireRole(TipoUsuario.Revisor.ToString())
+                );
             });
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -31,17 +31,20 @@ namespace destino_redacao_1000_api
                 KeyConditionExpression = "#tipo = :tipo",
                 ExpressionAttributeNames = new Dictionary<string, string> {
                     { "#tipo", "tipo" },
-                    { "#id", "id" },                    
+                    { "#id", "id" },
+                    { "#dtAtualizacao", "dt-atualizacao" },
+                    { "#autorId", "autor-id" },
+                    { "#autorEmail", "autor-email" },
                     { "#ordem", "ordem" },
                     { "#titulo", "titulo" },
                     { "#texto", "texto" },
-                    { "#imagemUrl", "imagemUrl" }
+                    { "#imagemUrl", "url-imagem" }
                 },
                 ExpressionAttributeValues = new Dictionary<string, AttributeValue>
                 {
                     { ":tipo", new AttributeValue { S = "postagem" } }
                 },
-                ProjectionExpression = "#id, #ordem, #titulo, #texto, #imagemUrl"
+                ProjectionExpression = "#id, #ordem, #dtAtualizacao, #autorId,  #autorEmail, #titulo, #texto, #imagemUrl"
             };
 
             var resp = new Response<IEnumerable<Postagem>>();
@@ -94,6 +97,11 @@ namespace destino_redacao_1000_api
                     {
                         postagem.Id = (Int32)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                     }
+                    
+                    postagem.DataAtualizacao = DateTime.Now;
+                    exprAttrValues.Add(":dtAtualizacao", new AttributeValue { S = postagem.DataAtualizacao.ToString("dd/MM/yyyy hh:mm:ss") });
+                    updateExpr.Append(" #dtAtualizacao = :dtAtualizacao,");
+                    exprAttrNames.Add("#dtAtualizacao", "dt-atualizacao");
 
                     if (postagem.Autor != null)
                     {
@@ -101,7 +109,7 @@ namespace destino_redacao_1000_api
                         updateExpr.Append(" #autorId = :autorId,");
                         exprAttrNames.Add("#autorId", "autor-id");
 
-                        exprAttrValues.Add(":autorEmail", new AttributeValue { N = postagem.Autor.Email.ToString() });
+                        exprAttrValues.Add(":autorEmail", new AttributeValue { S = postagem.Autor.Email });
                         updateExpr.Append(" #autorEmail = :autorEmail,");
                         exprAttrNames.Add("#autorEmail", "autor-email");
                     }
@@ -166,11 +174,6 @@ namespace destino_redacao_1000_api
                     {
                         { "id", new AttributeValue { N = postagem.Id.ToString() } },
                         { "tipo", new AttributeValue { S = "postagem" } }
-                    },
-                    ExpressionAttributeNames = new Dictionary<string, string>
-                    {
-                        { "#status", "status" },
-                        { "#tpArq", "tp-arquivo" },
                     }
                 };
 

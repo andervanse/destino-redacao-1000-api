@@ -36,9 +36,11 @@ namespace destino_redacao_1000_api
                 { "#status", "status" },
                 { "#tpArq", "tp-arquivo" },
                 { "#revIdRef", "revisao-id-ref" },
-                { "#revisorId", "revisor-id" }
+                { "#revisorId", "revisor-id" },
+                { "#arqRef", "arq-ref" },
+                
             };
-            _projectionExpression = "#id, #tipo, #nome, #assinanteId, #assinanteEmail, #dtAt, #url, #comentario, #dtPrev, #status, #tpArq, #revIdRef, #revisorId";
+            _projectionExpression = "#id, #tipo, #nome, #assinanteId, #assinanteEmail, #dtAt, #url, #comentario, #dtPrev, #status, #tpArq, #revIdRef, #revisorId, #arqRef";
         }
 
         public async Task<Response<Revisao>> SalvarAsync(Revisao revisao)
@@ -90,6 +92,13 @@ namespace destino_redacao_1000_api
                         exprAttrValues.Add(":revIdRef", new AttributeValue { N = revisao.RevisaoIdRef.Value.ToString() });
                         updateExpr.Append(" #revIdRef = :revIdRef,");
                         exprAttrNames.Add("#revIdRef", "revisao-id-ref");
+                    }
+
+                    if (!String.IsNullOrEmpty(revisao.ArquivoRef))
+                    {
+                        exprAttrValues.Add(":arqRef", new AttributeValue { S = revisao.ArquivoRef });
+                        updateExpr.Append(" #arqRef = :arqRef,");
+                        exprAttrNames.Add("#arqRef", "arq-ref");
                     }
 
                     revisao.Arquivo.DataAtualizacao = DateTime.Now;
@@ -469,6 +478,10 @@ namespace destino_redacao_1000_api
                                             DateTimeStyles.None,
                                             out dtAtual);
                         revisao.Arquivo.DataAtualizacao = dtAtual;
+                    }
+                    else if (attributeName == "arq-ref")
+                    {
+                        revisao.ArquivoRef = value.S;
                     }
                 }
                 list.Add(revisao);

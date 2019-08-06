@@ -18,6 +18,7 @@ namespace destino_redacao_1000_api
         public string Comentario { get; set; }
         public StatusRevisao? StatusRevisao { get; set; }        
         public int? RevisaoIdRef { get; set; }        
+        public string ArquivoRef { get; set; }
         public DateTime DataPrevista { get; set; }
     }
 

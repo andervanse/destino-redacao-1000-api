@@ -138,8 +138,8 @@ namespace destino_redacao_1000_api
             return UploadFile(form);
         }
 
-        [HttpDelete("{keyName}")]
-        public async Task<IActionResult> Delete(string keyName, [FromBody] DeletaRevisaoViewModel revisaoVm)
+        [HttpDelete("{nomeArquivo}")]
+        public async Task<IActionResult> Delete(string nomeArquivo, [FromBody] DeletaRevisaoViewModel revisaoVm)
         {
             try
             {
@@ -150,6 +150,7 @@ namespace destino_redacao_1000_api
                     Id = revisaoVm.Id,
                     AssinanteId = usuario.Id,
                     StatusRevisao = revisaoVm.StatusRevisao,
+                    ArquivoRef = revisaoVm.ArquivoRef,
                     Arquivo = new Arquivo 
                     {
                         Nome = revisaoVm.Arquivo.Nome,
@@ -157,7 +158,15 @@ namespace destino_redacao_1000_api
                     }
                 };
 
-                await _uploadFile.DeleteFileAsync(usuario, keyName);
+                await _uploadFile.DeleteFileAsync(usuario, nomeArquivo);
+
+                var arquivoRef = revisao.ArquivoRef;
+
+                if (!String.IsNullOrEmpty(arquivoRef))
+                {
+                    await _uploadFile.DeleteFileAsync(new Usuario { Id = revisao.RevisorId }, arquivoRef);
+                }
+
                 var resp = await _revisaoRepository.DeletarAsync(revisao);
 
                 if (resp.HasError)
@@ -178,6 +187,7 @@ namespace destino_redacao_1000_api
             long size = form.Files.Sum(f => f.Length);
             string comentario = form["comentario"];
             string tipoArquivo = form["tipoArquivo"];
+            string arquivoRef = form["arquivoRef"];
             int revisaoIdRef = 0;
             int.TryParse(form["revisaoIdRef"], out revisaoIdRef);
             int revisaoId = 0;
@@ -215,7 +225,8 @@ namespace destino_redacao_1000_api
                                     {
                                         Id = revisaoId,
                                         AssinanteId = assinanteId,
-                                        AssinanteEmail = usuario.Email,                                        
+                                        AssinanteEmail = usuario.Email, 
+                                        ArquivoRef = arquivoRef,
                                         Arquivo = new Arquivo
                                         {
                                             Nome = formFile.FileName,

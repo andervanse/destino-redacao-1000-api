@@ -76,7 +76,6 @@ namespace destino_redacao_1000_api
             catch (AmazonS3Exception e)
             {
                 _log.LogError("Error encountered when deleting object. Message:'{0}'", e.Message);
-
             }
             catch (Exception e)
             {
