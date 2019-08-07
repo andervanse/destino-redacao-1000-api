@@ -149,29 +149,38 @@ namespace destino_redacao_1000_api
                 {
                     Id = revisaoVm.Id,
                     AssinanteId = usuario.Id,
-                    StatusRevisao = revisaoVm.StatusRevisao,
+                    StatusRevisao = revisaoVm.StatusRevisao,                    
                     ArquivoRef = revisaoVm.ArquivoRef,
                     Arquivo = new Arquivo 
                     {
+                        TipoArquivo = revisaoVm.Arquivo.TipoArquivo,
                         Nome = revisaoVm.Arquivo.Nome,
                         Url = revisaoVm.Arquivo.Url
                     }
                 };
 
-                await _uploadFile.DeleteFileAsync(usuario, nomeArquivo);
+                Usuario usrArquivo;
 
-                var arquivoRef = revisao.ArquivoRef;
-
-                if (!String.IsNullOrEmpty(arquivoRef))
+                if (revisao.Arquivo.TipoArquivo == TipoArquivo.Correcao)
                 {
-                    await _uploadFile.DeleteFileAsync(new Usuario { Id = revisao.RevisorId }, arquivoRef);
+                    usrArquivo = new Usuario { Id = revisao.RevisorId };
+                }
+                else
+                {
+                    usrArquivo = new Usuario { Id = revisao.AssinanteId };
+                }
+
+                await _uploadFile.DeleteFileAsync(usrArquivo, nomeArquivo);
+
+                if (!String.IsNullOrEmpty(revisao.ArquivoRef))
+                {
+                    await _uploadFile.DeleteFileAsync(new Usuario { Id = revisao.RevisorId }, revisao.ArquivoRef);
                 }
 
                 var resp = await _revisaoRepository.DeletarAsync(revisao);
 
                 if (resp.HasError)
                   return BadRequest(resp.ErrorMessages);
-
             }
             catch (Exception e)
             {

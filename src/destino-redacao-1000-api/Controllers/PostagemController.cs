@@ -53,86 +53,39 @@ namespace destino_redacao_1000_api
             return Ok(lista);
         }
 
-        [HttpPost("imagem")]
+
+        [HttpPost]        
         [Authorize(Policy = "Revisor")]
-        public async Task<IActionResult> ImagemPost([FromForm] IFormCollection form)
+        public async Task<IActionResult> Post([FromForm] IFormCollection form)
         {
             if (form == null) 
                return BadRequest("Parâmetro nulo");
 
-            long size = form.Files.Sum(f => f.Length);
-
-            if (size > 0)
-            {
-                var formFile = form.Files[0];
-                var urlLocation = "";
-
-                if (formFile.Length > 0 && !String.IsNullOrEmpty(formFile.FileName))
-                {
-                    try
-                    {
-                        using (var mmStream = new MemoryStream())
-                        {
-                            var ext = Path.GetExtension(formFile.FileName);
-
-                            if (ext.ToLower().IndexOf(".png") > -1
-                                || ext.ToLower().IndexOf(".jpg") > -1 
-                                || ext.ToLower().IndexOf(".jpeg") > -1) 
-                            {
-                                await formFile.CopyToAsync(mmStream); 
-                                mmStream.Seek(0, SeekOrigin.Begin);
-                                var usuario = ObterUsuario();
-                                urlLocation = await _uploadFile.UploadFileAsync(usuario, mmStream, formFile.FileName);
-
-                                if (String.IsNullOrEmpty(urlLocation))
-                                {
-                                    _logger.LogError("Upload", "Falha no Upload.");
-                                    return BadRequest(new { message = "Falha no Upload." });
-                                }
-                            }
-                            else 
-                            {
-                                _logger.LogError("Upload", "Formato do arquivo inválido.");
-                                return BadRequest(new { message = "Formato do arquivo inválido." });
-                            }
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        var msgErro = "Falha ao processar arquivo.";
-                        _logger.LogError(e.Message, msgErro);
-                        return StatusCode(500, new { message = msgErro });
-                    }
-                }
-
-                return Created(urlLocation, new { message = "Created" });
-            }
-            else
-            {
-                return BadRequest("Arquivo inválido.");
-            }
-        }  
-
-        [HttpPost]        
-        [Authorize(Policy = "Revisor")]
-        public async Task<IActionResult> Post([FromBody] PostagemViewModel postagemVm)
-        {
-            if (postagemVm == null) 
-               return BadRequest("Parâmetro nulo");
+            int postagemId = 0;
+            int.TryParse(form["id"], out postagemId);
+            string titulo = form["titulo"];
+            string texto = form["texto"];
 
             if (!ModelState.IsValid)
                return BadRequest(ModelState);
             
             var postagem         = new Postagem();
-            postagem.Id          = postagemVm.Id;
-            postagem.Titulo      = postagemVm.Titulo;
-            postagem.Texto       = postagemVm.Texto;
-            postagem.UrlImagem   = postagemVm.UrlImagem;
+            postagem.Id          = postagemId;
+            postagem.Titulo      = titulo;
+            postagem.Texto       = texto;
             
             var usuario          = this.ObterUsuario();
             postagem.Autor.Id    = usuario.Id;
             postagem.Autor.Email = usuario.Email;
-            var response         = await _repository.SalvarAsync(postagem);
+
+            postagem.UrlImagem   = await SalvarImagemAsync(form);
+
+            if (String.IsNullOrEmpty(postagem.UrlImagem))
+            {
+                return BadRequest("Falha ao realizar o upload da imagem.");
+            }
+
+            var response = await _repository.SalvarAsync(postagem);
 
             if (response.HasError)
             {
@@ -166,8 +119,58 @@ namespace destino_redacao_1000_api
             }
 
             return Ok(response.Return);
-        }
+        }    
 
+        private async Task<string> SalvarImagemAsync(IFormCollection form)
+        {
+            long size = form.Files.Sum(f => f.Length);
+
+            if (size > 0)
+            {
+                var formFile = form.Files[0];
+                var urlLocation = "";
+
+                if (formFile.Length > 0 && !String.IsNullOrEmpty(formFile.FileName))
+                {
+                    try
+                    {
+                        using (var mmStream = new MemoryStream())
+                        {
+                            var ext = Path.GetExtension(formFile.FileName);
+
+                            if (ext.ToLower().IndexOf(".png") > -1
+                                || ext.ToLower().IndexOf(".jpg") > -1 
+                                || ext.ToLower().IndexOf(".jpeg") > -1) 
+                            {
+                                await formFile.CopyToAsync(mmStream); 
+                                mmStream.Seek(0, SeekOrigin.Begin);
+                                var usuario = ObterUsuario();
+                                urlLocation = await _uploadFile.UploadFileAsync(usuario, mmStream, formFile.FileName);
+
+                                if (String.IsNullOrEmpty(urlLocation))
+                                {
+                                    _logger.LogError("Upload", "Falha no Upload.");
+                                }
+                            }
+                            else 
+                            {
+                                _logger.LogError("Upload", "Formato da imagem inválida.");
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        var msgErro = "Falha ao processar imagem.";
+                        _logger.LogError(e.Message, msgErro);
+                    }
+                }
+
+                return urlLocation;
+            }
+            else
+            {
+                return null;
+            }
+        }     
     }
-
 }
