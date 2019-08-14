@@ -65,6 +65,7 @@ namespace destino_redacao_1000_api
             int.TryParse(form["id"], out postagemId);
             string titulo = form["titulo"];
             string texto = form["texto"];
+            string urlImagem = form["urlImagem"];
 
             if (!ModelState.IsValid)
                return BadRequest(ModelState);
@@ -73,14 +74,14 @@ namespace destino_redacao_1000_api
             postagem.Id          = postagemId;
             postagem.Titulo      = titulo;
             postagem.Texto       = texto;
-            
+            postagem.UrlImagem   = urlImagem;
+
             var usuario          = this.ObterUsuario();
             postagem.Autor.Id    = usuario.Id;
             postagem.Autor.Email = usuario.Email;
-
             postagem.UrlImagem   = await SalvarImagemAsync(form);
 
-            if (String.IsNullOrEmpty(postagem.UrlImagem))
+            if (String.IsNullOrEmpty(postagem.UrlImagem) && form.Files.Count > 0)
             {
                 return BadRequest("Falha ao realizar o upload da imagem.");
             }
