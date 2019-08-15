@@ -23,7 +23,7 @@ namespace destino_redacao_1000_api
             _logger = logger;
         }
         
-        public async Task<Response<IEnumerable<Postagem>>> ObterPostagensAsync()
+        public async Task<Response<IEnumerable<Postagem>>> ObterPostagensAsync(CategoriaPostagem categoria)
         {
             QueryRequest qryRequest = new QueryRequest
             {
@@ -38,13 +38,16 @@ namespace destino_redacao_1000_api
                     { "#ordem", "ordem" },
                     { "#titulo", "titulo" },
                     { "#texto", "texto" },
-                    { "#imagemUrl", "url-imagem" }
+                    { "#imagemUrl", "url-imagem" },
+                    { "#cat", "categoria" }
                 },
+                FilterExpression = "#cat = :cat",
                 ExpressionAttributeValues = new Dictionary<string, AttributeValue>
                 {
-                    { ":tipo", new AttributeValue { S = "postagem" } }
+                    { ":tipo", new AttributeValue { S = "postagem" } },
+                    { ":cat", new AttributeValue { S = categoria.ToString() } },
                 },
-                ProjectionExpression = "#id, #ordem, #dtAtualizacao, #autorId,  #autorEmail, #titulo, #texto, #imagemUrl"
+                ProjectionExpression = "#id, #ordem, #dtAtualizacao, #autorId,  #autorEmail, #titulo, #texto, #imagemUrl, #cat"
             };
 
             var resp = new Response<IEnumerable<Postagem>>();
@@ -134,6 +137,10 @@ namespace destino_redacao_1000_api
                         updateExpr.Append(" #url = :url,");
                         exprAttrNames.Add("#url", "url-imagem");
                     }
+
+                    exprAttrValues.Add(":cat", new AttributeValue { S = postagem.Categoria.ToString() });
+                    updateExpr.Append(" #cat = :cat,");
+                    exprAttrNames.Add("#cat", "categoria");
 
                     var request = new UpdateItemRequest
                     {
@@ -239,6 +246,14 @@ namespace destino_redacao_1000_api
                     {
                         postagem.UrlImagem = value.S;
                     }
+                    else if (attributeName == "categoria")
+                    {
+                        Object categoria = null;
+                        Enum.TryParse(typeof(CategoriaPostagem), value.S, true, out categoria);
+
+                        if (categoria != null)
+                           postagem.Categoria = (CategoriaPostagem)categoria;
+                    }                    
                     else if (attributeName == "dt-atualizacao")
                     {
                         DateTime dataAtualizacao;

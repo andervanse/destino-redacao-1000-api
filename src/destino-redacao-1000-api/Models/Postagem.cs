@@ -14,6 +14,9 @@ namespace destino_redacao_1000_api
         public string Titulo { get; set; }
         public string Texto { get; set; }
         public string UrlImagem { get; set; }
-        public DateTime DataAtualizacao { get; set; }
+        public CategoriaPostagem Categoria { get; set; }
+        public DateTime DataAtualizacao { get; set; }        
     }
+
+    public enum CategoriaPostagem { Indefinida, Redacoes, Dicas };
 }

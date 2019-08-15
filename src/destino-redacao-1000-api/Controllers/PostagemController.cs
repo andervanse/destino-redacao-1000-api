@@ -29,11 +29,10 @@ namespace destino_redacao_1000_api
             _logger = logger;
         }
 
-        [ActionName("GetAll")]
-        [HttpGet]
-        public async Task<IActionResult> Get()
+        [HttpGet("{categoria}")]
+        public async Task<IActionResult> Get(CategoriaPostagem categoria)
         {
-            var response = await _repository.ObterPostagensAsync();
+            var response = await _repository.ObterPostagensAsync(categoria);
 
             if (response.HasError)
             {
@@ -47,7 +46,8 @@ namespace destino_redacao_1000_api
                     DataAtualizacao = p.DataAtualizacao,
                     Titulo = p.Titulo,
                     Texto = p.Texto,
-                    UrlImagem = p.UrlImagem
+                    UrlImagem = p.UrlImagem,
+                    Categoria = p.Categoria
                 }).ToList();
 
             return Ok(lista);
@@ -66,6 +66,7 @@ namespace destino_redacao_1000_api
             string titulo = form["titulo"];
             string texto = form["texto"];
             string urlImagem = form["urlImagem"];
+            string categoria = form["categoria"];
 
             if (!ModelState.IsValid)
                return BadRequest(ModelState);
@@ -75,6 +76,15 @@ namespace destino_redacao_1000_api
             postagem.Titulo      = titulo;
             postagem.Texto       = texto;
             postagem.UrlImagem   = urlImagem;
+
+            if (!String.IsNullOrEmpty(categoria))
+            {
+                Object cat = null;
+                Enum.TryParse(typeof(CategoriaPostagem), categoria, true, out cat);
+
+                if (cat != null)
+                   postagem.Categoria = (CategoriaPostagem)cat;
+            }
 
             var usuario          = this.ObterUsuario();
             postagem.Autor.Id    = usuario.Id;
@@ -93,7 +103,9 @@ namespace destino_redacao_1000_api
                 return BadRequest(response.ErrorMessages);
             }
 
-            return CreatedAtAction("GetAll", response.Return);
+            return CreatedAtAction( actionName: nameof(Get), 
+                                    routeValues: new { categoria = postagem.Categoria }, 
+                                    value: response.Return);
         }   
 
         [HttpDelete("{id}")]
