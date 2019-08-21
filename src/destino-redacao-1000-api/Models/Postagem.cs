@@ -18,5 +18,5 @@ namespace destino_redacao_1000_api
         public DateTime DataAtualizacao { get; set; }        
     }
 
-    public enum CategoriaPostagem { Indefinida, Redacoes, Dicas };
+    public enum CategoriaPostagem { Indefinida, Propostas, Dicas };
 }
