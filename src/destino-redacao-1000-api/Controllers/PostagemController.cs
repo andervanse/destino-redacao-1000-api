@@ -123,13 +123,17 @@ namespace destino_redacao_1000_api
             postagem.UrlImagem = postagemVm.UrlImagem;
             
             var usuario = ObterUsuario();
-            Uri uri;
 
-            if (!Uri.TryCreate(postagem.UrlImagem, UriKind.Absolute, out uri))
-                uri = new Uri(postagem.UrlImagem); 
+            if (!String.IsNullOrEmpty(postagem.UrlImagem))
+            {
+                Uri uri;
+                
+                if (!Uri.TryCreate(postagem.UrlImagem, UriKind.Absolute, out uri))
+                    uri = new Uri(postagem.UrlImagem); 
 
-            string fileName = Path.GetFileName(uri.LocalPath);
-            await _uploadFile.DeleteFileAsync(usuario, fileName);
+                string fileName = Path.GetFileName(uri.LocalPath);
+                await _uploadFile.DeleteFileAsync(usuario, fileName);
+            }
 
             var response = await _repository.ExcluirAsync(postagem);
 
